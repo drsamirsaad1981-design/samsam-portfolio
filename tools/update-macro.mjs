@@ -31,6 +31,7 @@ const BG = process.env.BG_API || 'https://api.bitget.com/api/v2/mix/market';
 const GT = process.env.GATE_API || 'https://api.gateio.ws/api/v4/futures/usdt';
 const HL = process.env.HL_INFO || 'https://api.hyperliquid.xyz/info';
 const DB = process.env.DB_API || 'https://www.deribit.com/api/v2/public';
+const LL = process.env.LLAMA_API || 'https://stablecoins.llama.fi';
 const RELAY = process.env.BN_RELAY || 'https://me-central1-samsam-portfolio.cloudfunctions.net/binanceRelay';
 const log = (...a) => console.log('[macro]', ...a);
 const sleep = ms => new Promise(z => setTimeout(z, FAST ? 5 : ms));
@@ -190,14 +191,40 @@ export async function fundingPart(old, nowMs) {
   log('funding', f.rate, '%/8h ·', f.venues.map(x => x.k + ' ' + x.rate).join(', '), '· without', f.missing.join(', ') || '—'); return f;
 }
 
+// ═══ stablecoin supply (DefiLlama's free API — no key; the lab of 28 Nov 2026) ═════════════════════════════════════════
+// How many DOLLAR-pegged coins exist, in COINS (a unit is a dollar) — not at market price: on a de-peg day the price
+// falls and the supply does not (9 May 2022: −$0.9B in coins, −$5.4B at price), and that must not read as money leaving.
+//   chart: /stablecoincharts/all → [{ date (seconds), totalCirculating: { peggedUSD } }] — one row a day since 2017
+//   list:  /stablecoins?includePrices=true → { peggedAssets: [{ symbol, name, pegType, circulating, circulatingPrevMonth, price }] }
+// → { v, day, total, tot: the last 31 daily totals (oldest first, null for a missing day), y1: the total a year before,
+//     top: the biggest eight [{ sym, name, circ, m30 (its supply a month ago, null when it was not listed), price }],
+//     n: how many coins, src, at }. The total and its changes come from the chart; the breakdown from the list.
+export function stablesFrom(chart, list, nowMs = Date.now()) {
+  const H = new Map((Array.isArray(chart) ? chart : []).map(x => [Math.floor(+x.date / 86400), +(x && x.totalCirculating && x.totalCirculating.peggedUSD)]).filter(x => x[0] > 0 && x[1] > 0));
+  if (H.size < 40) return null;
+  const last = Math.max(...H.keys()), at = n => H.get(last - n) > 0 ? Math.round(H.get(last - n)) : null;
+  const tot = []; for (let n = 30; n >= 0; n--) tot.push(at(n));
+  const one = o => o && +o.peggedUSD > 0 ? +o.peggedUSD : 0;
+  const A = (list && Array.isArray(list.peggedAssets) ? list.peggedAssets : []).filter(x => x && x.pegType === 'peggedUSD' && x.symbol && one(x.circulating) > 0)
+    .map(x => ({ sym: String(x.symbol).slice(0, 12), name: String(x.name || x.symbol).slice(0, 40), circ: Math.round(one(x.circulating)), m30: one(x.circulatingPrevMonth) > 0 ? Math.round(one(x.circulatingPrevMonth)) : null, price: +x.price > 0 ? +(+x.price).toFixed(4) : null }))
+    .sort((a, b) => b.circ - a.circ);
+  return { v: 1, day: iso(last), total: at(0), tot, y1: at(365), top: A.slice(0, 8), n: A.length || null, src: 'DefiLlama', at: new Date(nowMs).toISOString() };
+}
+export async function stablesPart(old, nowMs) {
+  const chart = await get(`${LL}/stablecoincharts/all`), list = chart ? await get(`${LL}/stablecoins?includePrices=true`) : null, s = stablesFrom(chart, list, nowMs);
+  if (!s) { log('stables: DefiLlama did not answer — kept the last one'); return old || null; }
+  if (!s.top.length && old && Array.isArray(old.top) && old.top.length) { s.top = old.top; s.n = old.n || null; log('stables: the list did not come — kept the last breakdown'); }
+  log('stables', (s.total / 1e9).toFixed(2) + 'B', 'to', s.day, '· 30 days', s.tot[0] ? ((s.total - s.tot[0]) / 1e9).toFixed(2) + 'B' : '—', '·', s.top.slice(0, 4).map(x => x.sym).join(', ')); return s;
+}
+
 export async function main(dir, nowMs = Date.now()) {
   const OUT = path.resolve(dir, 'm'), F = path.join(OUT, 'macro.json'); fs.mkdirSync(OUT, { recursive: true });
   const old = readJson(F) || {}, out = { v: 1, updated: new Date(nowMs).toISOString() };
-  for (const [k, fn] of [['mvrv', () => mvrvPart(OUT, old.mvrv, nowMs)], ['dxy', () => dxyPart(old.dxy)], ['funding', () => fundingPart(old.funding, nowMs)]]) {
+  for (const [k, fn] of [['mvrv', () => mvrvPart(OUT, old.mvrv, nowMs)], ['dxy', () => dxyPart(old.dxy)], ['funding', () => fundingPart(old.funding, nowMs)], ['stables', () => stablesPart(old.stables, nowMs)]]) {
     try { const v = await fn(); if (v) out[k] = v; } catch (e) { log(k + ':', e && e.message); if (old[k]) out[k] = old[k]; }
   }
   fs.writeFileSync(F, JSON.stringify(out));
-  const m = C.mvrvRead(out.mvrv, nowMs); log('written ·', m ? `MVRV ${m.v} (${m.day}${m.via ? ', via ' + m.via : ''})` : 'no MVRV', '·', out.dxy ? 'DXY ' + out.dxy.price : 'no DXY', '·', out.funding ? 'funding ' + out.funding.rate : 'no funding');
+  const m = C.mvrvRead(out.mvrv, nowMs); log('written ·', m ? `MVRV ${m.v} (${m.day}${m.via ? ', via ' + m.via : ''})` : 'no MVRV', '·', out.dxy ? 'DXY ' + out.dxy.price : 'no DXY', '·', out.funding ? 'funding ' + out.funding.rate : 'no funding', '·', out.stables ? 'stables ' + (out.stables.total / 1e9).toFixed(1) + 'B' : 'no stables');
   return out;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {

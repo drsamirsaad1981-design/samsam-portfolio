@@ -54,8 +54,14 @@ await new Promise(ok => srv.listen(0, ok)); const B = 'http://127.0.0.1:' + srv.
 const env = { ...process.env, CG_FAST: '1', NO_LINKS: '1', CG_API: B + '/cg', BN_API: B + '/bn', FNG_API: B + '/fng/?limit=2', CMC_PUB: B + '/cmcpub', CMC_LIST: B + '/cmclist?x=1', YH_API: B + '/yh', HL_BOARD: B + '/hl/board', HL_INFO: B + '/hl/info', GT_API: B + '/gt' };
 const run = dir => new Promise((ok, no) => { import('node:child_process').then(({ execFile }) => execFile(process.execPath, [path.join(ROOT, 'tools/update-market.mjs'), dir], { env, timeout: 120000 }, (e, so, se) => e ? no(e) : ok(so))); });
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mkt-'));
+// the macro job's file is there before the snapshot is made (as in "Price history"): its parts ride in the snapshot
+const MACRO = { v: 1, funding: { v: 1, rate: 0.0044, at: new Date().toISOString() }, stables: { v: 1, day: new Date().toISOString().slice(0, 10), total: 280e9, tot: [281e9, 280e9], top: [], src: 'DefiLlama' }, dxy: { v: 2, price: 1 } };
+fs.mkdirSync(path.join(dir, 'm'), { recursive: true }); fs.writeFileSync(path.join(dir, 'm/macro.json'), JSON.stringify(MACRO));
 const out = await run(dir);
 const m = JSON.parse(fs.readFileSync(path.join(dir, 'm/market.json'), 'utf8')), alt = JSON.parse(fs.readFileSync(path.join(dir, 'm/alt.json'), 'utf8'));
+check('the macro job\'s parts ride in the snapshot — funding and the stablecoin supply as written; a part with another make-up number is left out', JSON.stringify(m.funding) === JSON.stringify(MACRO.funding) && JSON.stringify(m.stables) === JSON.stringify(MACRO.stables) && !m.dxy, [m.funding, m.stables, m.dxy]);
+{ fs.rmSync(path.join(dir, 'm/macro.json')); await run(dir); const mk = JSON.parse(fs.readFileSync(path.join(dir, 'm/market.json'), 'utf8'));
+  check('…and with no macro file on the next run the snapshot keeps the parts it had', JSON.stringify(mk.stables) === JSON.stringify(MACRO.stables) && JSON.stringify(mk.funding) === JSON.stringify(MACRO.funding), [mk.stables]); }
 check('Fear & Greed is CoinMarketCap\'s (13, Extreme Fear), yesterday 11, last week 31', m.fng && m.fng.value === 13 && m.fng.label === 'Extreme Fear' && m.fng.prev === 11 && m.fng.week === 31 && m.fng.src === 'cmc', m.fng);
 check('Altcoin Season is CoinMarketCap\'s official index (46), ready, the app\'s own count kept as "own"', m.alt && m.alt.value === 46 && m.alt.ready && m.alt.src === 'cmc' && m.alt.own != null && m.alt.label === 'Leaning Bitcoin', m.alt);
 check('the page\'s coins are CoinMarketCap\'s top 100: its order, no stablecoin / wrapped, no CoinGecko-only coin', alt.list === 'cmc' && alt.coins.length === 100 && alt.coins[6].id === 'alt8' && alt.coins[7].id === 'alt7' && !alt.coins.some(c => c.id === 'zzz' || c.id === 'tether'), alt.coins.slice(5, 9).map(c => c.id));

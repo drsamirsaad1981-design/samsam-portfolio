@@ -92,6 +92,7 @@ exit_test.py
 exit_rainbow_test.py
 macro_app_test.py
 hub_sections_test.py
+stables_test.py
 market_rainbow_test.py
 exit_metal_test.py
 fab_scroll_test.py

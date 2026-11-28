@@ -1,10 +1,10 @@
-// MVRV, the dollar index, BTC funding: the three readers and the one funding wording (samsam-core.js) and the job that
+// MVRV, the dollar index, BTC funding, stablecoin supply: the readers and the one funding wording (samsam-core.js) and the job that
 // writes them (tools/update-macro.mjs), on a made-up network whose answers are known. (What the real sources say was
 // measured on GitHub by tools/lab/macro.mjs.)
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import * as C from '../samsam-core.js';
 process.env.MACRO_FAST = '1';
-const { mvrvSummary, dxyFormula, dxyFrom, fundingMix, main, MVRV_FROM, FAR_VENUES } = await import('../tools/update-macro.mjs');
+const { mvrvSummary, dxyFormula, dxyFrom, fundingMix, stablesFrom, main, MVRV_FROM, FAR_VENUES } = await import('../tools/update-macro.mjs');
 
 let fails = 0, n = 0;
 const check = (name, ok, info) => { n++; if (!ok) { fails++; console.log('✗', name, info === undefined ? '' : JSON.stringify(info)); } };
@@ -92,7 +92,12 @@ const mv = d => 1.6 + 1.2 * Math.sin((d - 14000) / 232);   // a made-up ratio, a
 
 // ── the whole job on a made-up network ──
 const J = j => new Response(JSON.stringify(j), { status: 200 }), real = globalThis.fetch, dir = fs.mkdtempSync(path.join(os.tmpdir(), 'macro-'));
-const net = { cm: true, cmTo: TODAY - 1, bc: true, dxy: true, pairs: true, okx: true, relay: false, calls: [] };
+const net = { cm: true, cmTo: TODAY - 1, bc: true, dxy: true, pairs: true, okx: true, relay: false, ll: true, llList: true, calls: [] };
+// DefiLlama, made up: the supply in coins falls $100M a day to $280B today; at market price it is 2% lower (a de-peg) —
+// and there are euro coins beside the dollar ones
+const llChart = to => { const a = []; for (let d = to - 400; d <= to; d++) a.push({ date: String(d * 86400), totalCirculating: { peggedUSD: 280e9 + (to - d) * 1e8, peggedEUR: 5e8 }, totalCirculatingUSD: { peggedUSD: (280e9 + (to - d) * 1e8) * 0.98, peggedEUR: 5.4e8 } }); return a; };
+const llCoin = (symbol, c, prev, pegType = 'peggedUSD') => ({ id: symbol, symbol, name: symbol + ' Dollar', pegType, pegMechanism: 'fiat-backed', price: 0.9991, circulating: { [pegType]: c }, circulatingPrevMonth: prev ? { [pegType]: prev } : 0 });
+const llList = () => ({ peggedAssets: [llCoin('USDC', 70e9, 72e9), llCoin('EURC', 3e11, 3e11, 'peggedEUR'), llCoin('USDT', 172e9, 180e9), llCoin('NEWUSD', 6e8, 0), llCoin('DEAD', 0, 1e9), ...Array.from({ length: 9 }, (_, i) => llCoin('S' + i, (9 - i) * 1e9, (9 - i) * 1e9))] });
 const pay = (n, base, step = 8 * 36e5) => Array.from({ length: n }, (_, i) => [NOW - 36e5 - i * step, base]);
 globalThis.fetch = async (u, o) => { u = String(u); net.calls.push(u);
   if (/coinmetrics/.test(u)) { if (!net.cm) return new Response('{}', { status: 503 }); const from = dn(/start_time=([\d-]+)/.exec(u)[1]), data = []; for (let d = from; d <= net.cmTo; d++) data.push({ asset: 'btc', time: iso(d) + 'T00:00:00.000000000Z', CapMVRVCur: String(d < dn('2011-01-01') ? 140 : mv(d)), PriceUSD: '60000' }); return J({ data }); }
@@ -106,17 +111,30 @@ globalThis.fetch = async (u, o) => { u = String(u); net.calls.push(u);
   if (/gateio/.test(u)) { if (/contracts/.test(u)) return J({ funding_rate: '0.000069', position_size: 325000000, quanto_multiplier: '0.0001', mark_price: '60000', funding_interval: 28800 }); return J(pay(90, 0.00002).map(p => ({ t: Math.floor(p[0] / 1000), r: String(p[1]) }))); }
   if (/hyperliquid/.test(u)) { const b = JSON.parse(o.body); if (b.type === 'metaAndAssetCtxs') return J([{ universe: [{ name: 'ETH' }, { name: 'BTC' }] }, [{}, { funding: '0.0000125', openInterest: '38666.667', markPx: '60000' }]]); return J(pay(168, 0.0000035, 36e5).map(p => ({ time: p[0], fundingRate: String(p[1]) }))); }
   if (/deribit/.test(u)) { if (/ticker/.test(u)) return J({ result: { funding_8h: 0.000003, open_interest: 802100000 } }); return J({ result: pay(168, -0.000009, 36e5).map(p => ({ timestamp: p[0], interest_8h: p[1] })) }); }
+  if (/llama/.test(u)) { if (!net.ll || (/stablecoins\?/.test(u) && !net.llList)) return new Response('{}', { status: 502 }); return /stablecoincharts\/all/.test(u) ? J(llChart(net.llTo || TODAY)) : J(llList()); }
   if (/binanceRelay/.test(u)) return net.relay ? J({ venues: [{ k: 'Binance', rate: 0.005, oi: 9e9, m7: 0.004 }, { k: 'Mallory', rate: 1, oi: 9e12 }] }) : new Response('{"error":"POST only"}', { status: 405 });
   return new Response('?', { status: 404 }); };
 {
   fs.mkdirSync(path.join(dir, 'm'), { recursive: true });
   const a = await main(dir, NOW), kept = JSON.parse(fs.readFileSync(path.join(dir, 'm', 'mvrv.json'), 'utf8')), file = JSON.parse(fs.readFileSync(path.join(dir, 'm', 'macro.json'), 'utf8'));
   check('first run: MVRV\'s history from 2011 is kept (one ratio a day, to yesterday), nothing from before', kept.start === '2011-01-01' && kept.cm === iso(TODAY - 1) && kept.p.length === TODAY - dn('2011-01-01') && kept.p.every(v => v > 0 && v < 10) && kept.px === 60000, [kept.cm, kept.p.length]);
-  check('…the file carries the three parts, each with its make-up number and its time', file.v === 1 && ['mvrv', 'dxy', 'funding'].every(k => file[k] && file[k].v === 1 && file[k].at) && JSON.stringify(file) === JSON.stringify(a), Object.keys(file));
+  check('…the file carries the four parts, each with its make-up number and its time', file.v === 1 && ['mvrv', 'dxy', 'funding', 'stables'].every(k => file[k] && file[k].v === 1 && file[k].at) && JSON.stringify(file) === JSON.stringify(a), Object.keys(file));
   check('…MVRV: yesterday\'s ratio, the average cost from Coin Metrics\' own price, the source named', file.mvrv.day === iso(TODAY - 1) && near(file.mvrv.now, mv(TODAY - 1), 1e-4) && file.mvrv.realized === Math.round(60000 / mv(TODAY - 1)) && file.mvrv.src === 'Coin Metrics' && !file.mvrv.via, file.mvrv);
   check('…DXY from the index itself', file.dxy.price === 103.8 && file.dxy.ch24 === 0 && /DX-Y\.NYB/.test(file.dxy.src) && file.dxy.lo52 === 103.8, file.dxy);
   check('…funding: five venues weighted to +0.0045%, hourly venues × 8, the 7-day mean, without Binance and Bybit', file.funding.rate === 0.0045 && file.funding.n === 5 && file.funding.missing.join() === 'Binance,Bybit' && file.funding.venues.find(x => x.k === 'Hyperliquid').rate === 0.01 && file.funding.venues.find(x => x.k === 'Deribit').m7 === -0.0009 && file.funding.m7 != null, file.funding);
   check('…the readers accept the file as it is', C.mvrvRead(file.mvrv, NOW) && C.dxyNow(file.dxy, NOW) && C.fundingNow(file.funding, NOW).k === 'rest');
+  // ── stablecoin supply ──
+  const st = file.stables, sn = C.stablesNow(st, NOW);
+  check('…stables: the dollar-pegged supply in COINS ($280B — not the $274.4B at market price, not the euro coins), to today, with its last 31 days and the total a year before', st && st.v === 1 && st.day === iso(TODAY) && st.total === 280e9 && st.tot.length === 31 && st.tot[0] === 283e9 && st.tot[30] === 280e9 && st.y1 === 280e9 + 365e8 && st.src === 'DefiLlama' && st.at, st && [st.day, st.total, st.tot[0], st.y1]);
+  check('…the biggest eight by supply from the list itself (dollar pegs only, a coin with nothing in circulation left out), each with its supply a month ago — none for a coin that was not listed then', st.top.length === 8 && st.top.map(x => x.sym).join() === 'USDT,USDC,S0,S1,S2,S3,S4,S5' && st.top[0].circ === 172e9 && st.top[0].m30 === 180e9 && st.top[0].price === 0.9991 && st.n === 12 && !st.top.some(x => /EURC|DEAD/.test(x.sym)), st.top.map(x => x.sym));
+  check('stablesNow: a day / 7 / 30 days / a year in coins and in percent, 30 daily changes oldest first, each coin\'s share and month', sn && sn.total === 280e9 && sn.d1 === -1e8 && sn.d7 === -7e8 && sn.d30 === -3e9 && sn.d365 === -365e8 && near(sn.p30, -3e9 / 283e9 * 100) && near(sn.p7, -7e8 / 280.7e9 * 100) && near(sn.p365, (280e9 / 316.5e9 - 1) * 100)
+    && sn.bars.length === 30 && sn.bars[0][0] === iso(TODAY - 29) && sn.bars[29][0] === iso(TODAY) && sn.bars.every(b => b[1] === -1e8) && near(sn.top[0].share, 172 / 280 * 100) && near(sn.top[0].m30, (172 / 180 - 1) * 100) && sn.top[0].isNew === false, sn && [sn.d1, sn.d7, sn.d30, sn.d365, sn.bars.length]);
+  { const s2 = stablesFrom(llChart(TODAY), { peggedAssets: [llCoin('USDT', 172e9, 180e9), llCoin('NEWUSD', 6e8, 0)] }, NOW), r2 = C.stablesNow(s2, NOW);
+    check('…a coin that was not listed a month ago is "new", never a percent', r2.top[1].sym === 'NEWUSD' && r2.top[1].isNew === true && r2.top[1].m30 === null && s2.top[1].m30 === null, r2.top[1]);
+    const gap = llChart(TODAY).filter(x => +x.date / 86400 !== TODAY - 7), r3 = C.stablesNow(stablesFrom(gap, llList(), NOW), NOW);
+    check('…a missing day leaves a gap, not a made-up change: no 7-day figure, 28 bars', r3.d7 === null && r3.p7 === null && r3.d30 === -3e9 && r3.bars.length === 28 && !r3.bars.some(b => b[0] === iso(TODAY - 7) || b[0] === iso(TODAY - 6)), [r3.d7, r3.bars.length]);
+    check('…a part over 4 days old is not a reading; a short or empty answer is no part', C.stablesNow(st, NOW + 4 * DAY) && C.stablesNow(st, NOW + 6 * DAY) === null && stablesFrom([], llList(), NOW) === null && stablesFrom(llChart(TODAY).slice(-20), llList(), NOW) === null && stablesFrom(null, null, NOW) === null && C.stablesNow(null, NOW) === null && C.stablesNow({ ...st, tot: [1] }, NOW) === null);
+  }
 
   net.calls = []; await main(dir, NOW + 30 * 60e3);
   check('half an hour later: Coin Metrics is not asked again (the day is there); the index and the venues are', !net.calls.some(u => /coinmetrics|blockchain/.test(u)) && net.calls.some(u => /DX-Y/.test(u)) && net.calls.some(u => /okx/.test(u)), net.calls.filter(u => /coinmetrics/.test(u)));
@@ -138,13 +156,18 @@ globalThis.fetch = async (u, o) => { u = String(u); net.calls.push(u);
   net.pairs = false; const d2 = await main(dir, NOW + 4 * DAY);
   check('…and with the pairs silent too, the last answer stays', d2.dxy.price === d1.dxy.price);
 
+  net.llList = false; net.llTo = TODAY + 4; const l1 = await main(dir, NOW + 4 * DAY);
+  check('DefiLlama\'s list silent: the total and its days are new, the last breakdown stays', l1.stables.day === iso(TODAY + 4) && l1.stables.top.length === 8 && l1.stables.top[0].sym === 'USDT' && l1.stables.n === 12, l1.stables && [l1.stables.day, l1.stables.top.length]);
+  net.ll = false; net.llList = true; const l2 = await main(dir, NOW + 4 * DAY + 36e5);
+  check('…DefiLlama silent: the last part stays, never an empty one', JSON.stringify(l2.stables) === JSON.stringify(l1.stables));
+  net.ll = true;
   net.relay = true; const r1 = await main(dir, NOW + 4 * DAY);
   check('the relay answers: Binance joins (6 venues), only Bybit is missing — and a name the job does not know is ignored', r1.funding.n === 6 && r1.funding.missing.join() === 'Bybit' && r1.funding.venues.some(x => x.k === 'Binance') && !r1.funding.venues.some(x => x.k === 'Mallory'), r1.funding);
   net.relay = false; net.okx = false; const calls0 = net.calls.length; const r2 = await main(dir, NOW + 4 * DAY);
   check('one venue silent: four are still a mix', r2.funding.n === 4 && !r2.funding.venues.some(x => x.k === 'OKX') && net.calls.length > calls0, r2.funding);
   globalThis.fetch = async u => /coinmetrics|yahoo|blockchain/.test(String(u)) ? new Response('x', { status: 500 }) : new Response('{}', { status: 500 });
   const r3 = await main(dir, NOW + 4 * DAY);
-  check('everything silent: every part keeps its last answer', r3.funding && r3.funding.rate === r2.funding.rate && r3.dxy && r3.mvrv, Object.keys(r3));
+  check('everything silent: every part keeps its last answer', r3.funding && r3.funding.rate === r2.funding.rate && r3.dxy && r3.mvrv && r3.stables && r3.stables.total === 280e9, Object.keys(r3));
   globalThis.fetch = real; fs.rmSync(dir, { recursive: true, force: true });
 }
 console.log(fails ? `\n${fails} of ${n} checks FAILED` : `all ${n} macro checks passed`);

@@ -312,6 +312,7 @@
     mvrv: function () { return snapshot().then(function (j) { return j.mvrv || null; }, function () { return null; }); },
     dxy: function () { return snapshot().then(function (j) { return j.dxy || null; }, function () { return null; }); },
     funding: function () { return snapshot().then(function (j) { return j.funding || null; }, function () { return null; }); },
+    stables: function () { return snapshot().then(function (j) { return j.stables || null; }, function () { return null; }); },   // dollar-pegged supply (samsam-core.js → stablesNow)
     rainbowFull: function () {
       var k = 'rainbowFull', c = mem[k]; if (c && Date.now() - c.t < 30 * 60e3) return Promise.resolve(c.data);
       if (inflight[k]) return inflight[k];

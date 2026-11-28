@@ -62,7 +62,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   and loss tokens are right here) with "Last 7 days …" and "14 trading days" under them; the rainbow — its strip; BTC
   funding — its bar. Each gives way to the full view when its card opens (one picture of a thing at a time).
 - **Market Hub → Crypto has two headed sections that fold** (28 Nov): **Market Pulse** (نبض السوق: the four cards, ETF
-  Flows, BTC Funding — the market's size, flows, mood and leverage NOW) and **Bitcoin Valuation** (تقييم البيتكوين: the
+  Flows, Stablecoin Supply, BTC Funding — the market's size, flows, mood and leverage NOW) and **Bitcoin Valuation** (تقييم البيتكوين: the
   rainbow with the 200-week average, then Bitcoin Pi Cycle + Bitcoin MVRV). The first is NOT called "Market Structure":
   on the Exit page that name means exactly three conditions (BTC dominance, USDT dominance, ETH / BTC) — one name, one
   meaning. "Bitcoin Valuation" is the same three readings in both places and says them in the same words (`VAL_LIST` in
@@ -70,7 +70,17 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 - **A reading's level is said as a count, never as a zone we named** (28 Nov): the Pi Cycle and MVRV cells show the value,
   a bar from the lowest to the highest reading since 2012, "Higher than N% of days since 2012" (written by the jobs:
   `pi.hist`, `mvrv.hist`) and this cycle's highest — no "low / high", no "cheap / expensive". MVRV is said once on the
-  page: in its cell, not in the rainbow card any more.
+  page: in its cell, not in the rainbow card any more. **The bar is one smooth blend** (28 Nov, his ask): 8 px, rounded,
+  BTC Funding's white dot with a dark ring, the funding bar's five colours run together cold → warm — **no segments, no
+  edges, no named level** (segments would be zones). The Pi Cycle cell carries its two averages in dollars (`d111`,
+  `d350x2` — the Exit row's own numbers).
+- **Stablecoin Supply** (28 Nov, his "نفذ" after the lab's section F): the dollar-pegged supply from DefiLlama, **counted
+  in COINS, never at market price** (a de-peg is a fall in price, not money leaving); green / red bars are right here (a
+  signed amount, like ETF Flows). The biggest coins come **from the data, never typed in**; a coin with no value a month
+  ago reads "new", not a percent. Words: supply up = "usually demand for cash inside crypto" — never "new money
+  entered"; "a reading of liquidity, not a forecast of price"; it is NOT USDT dominance (an amount against a share). The
+  ⓘ's **"What was measured"** line keeps its limits in the same lines (95 months, 0.26 / 0.22, −0.7% against +2.0%, only
+  24 months, most in 2022–2023). "Source: DefiLlama" wherever it shows. One reader: `stablesNow()`.
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -101,6 +111,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
 | 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the labs `tools/lab/rainbow.mjs` and `tools/lab/macro.mjs` (trials only: they run on GitHub, write nothing, and report in the run's summary). The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
 | MVRV · 💵 dollar index · ⚖️ BTC funding | the job `tools/update-macro.mjs` → `m/macro.json` (+ `m/mvrv.json`, MVRV's whole history) — its three parts are copied into `m/market.json` (`mvrv`, `dxy`, `funding`) by `update-market.mjs`; readers and the funding wording in `samsam-core.js` (`mvrvRead`, `dxyNow`, `fundingNow`, `fundingRead` / `FUNDING_WORDS`); Exit row `samsam-exit.js`; Market Hub: `samsam-funding.js` (card), the Bitcoin Pi Cycle + Bitcoin MVRV card `samsam-btcval.js` (`#valCard`; `histOf` / `histPos` in the core), the dollar card in `samsam-assets.js` (Metals tab); Plan line `costNote` in `accumulation.html`; bot `macroLines` (`alerts-core.mjs`, in /market), `macroFacts` (`ai.mjs`); the lab `tools/lab/macro.mjs` |
+| Stablecoin Supply | the job's fourth part `stablesPart` / `stablesFrom` in `tools/update-macro.mjs` (`/stablecoincharts/all` for the total and its days, `/stablecoins` for the breakdown; the last breakdown or the last part stays when DefiLlama is silent) → `m/macro.json` → `stables` in `m/market.json`; reader `stablesNow` in `samsam-core.js` (drops a part over 4 days old); card `samsam-stables.js` (`#stableCard`, under ETF Flows); hint `stables`; tests `stables_test.py`, `macro_test.mjs`, `market_cmc_test.mjs` |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -410,7 +421,7 @@ Fourteenth round (28 Nov midday, batch A of two — his four answers: "نبض ا
   (one rule in `samsam-ar.js`); on an Arabic phone the header keeps one line ("US spot" stays in the ⓘ and the note; the
   closed card's amount takes the next line, like the rainbow's and the funding's).
 - The app guide's Market Hub paragraph follows (`guide-app.json`); `guide.json` (the bot's) was NOT touched.
-- **Batch B is next: a "Stablecoin Supply" card in Market Pulse** (DefiLlama's free API in the scheduled job, his plan:
+- **Batch B (built in the fifteenth round): a "Stablecoin Supply" card in Market Pulse** (DefiLlama's free API in the scheduled job, his plan:
   closed — the total, 30 small daily bars, net 7 / 30 days; open — the biggest coins and their month). Agreed before
   building: the daily change is counted in UNITS, not dollars (a de-peg must not read as money leaving); the ⓘ says
   "usually demand for cash inside crypto", not "new money entered"; the difference from USDT dominance is said (an
@@ -426,6 +437,21 @@ Fourteenth round (28 Nov midday, batch A of two — his four answers: "نبض ا
   are transfers; take the total and its change from the history call, the breakdown from the list; name the source.
 - The first live numbers of the new card (28 Nov 09:27 UTC): Pi Cycle 51.2% — higher than 35.5% of days since 2012
   (lowest 28.7% on 30 Sep 2022, highest 122.8%); MVRV 1.13 — higher than 16.7% (lowest 0.56 in Jan 2015, highest 5.88).
+
+Fifteenth round (28 Nov afternoon, his two notes on the Pi Cycle + MVRV card and "نفذ" for batch B):
+- `samsam-btcval.js`: the bar (`.bv-track` 8 px with `RAMP` = `SamsamFunding.COL` as one `linear-gradient`; `.bv-rail`
+  keeps the dot's centre 7 px inside each end so the whole dot stays on the bar; `.bv-dot` = `.fd-dot`), and two
+  `.bv-avg` lines under "100% is the cross".
+- `samsam-stables.js` (new): closed — the total, `#sbMini` (30 bars, 28 px), "Last 7 days" / "Last 30 days"; open —
+  `#sbV`, `#sbStats` (a day / 7 / 30 days / a year), `#sbBars` (72 px), `#sbTbl` (six coins), `#sbNote`. Key
+  `samsam_mkt_stable_open`. The bot and the AI do not read `stables` yet (the Worker was rebuilt only because the core
+  changed).
+- An Arabic date lesson: a whole date inside ONE left-to-right piece puts the day at the left end ("28 نوفمبر 2026" read
+  backwards from the right). Only the NUMBERS are left-to-right pieces (`dayH`); a span of days is said in words ("من …
+  إلى …"), never with an arrow.
+- The lab said to handle: a coin that appears overnight (→ "new"), DAI ↔ USDS transfers (→ the note: "a move from one
+  coin to another changes the list, not the total"), the total from the history call and the breakdown from the list.
+- `guide-app.json` has the card's sentence; `guide.json` (the bot's) was NOT touched.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state

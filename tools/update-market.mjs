@@ -96,8 +96,8 @@ async function main() {
   if (!snap.rainbow && old.rainbow) snap.rainbow = old.rainbow;
   // MVRV, the dollar index, BTC funding: written just before this run by tools/update-macro.mjs (m/macro.json) — the same
   // road as the rainbow's. Each part carries its own time; the readers in samsam-core.js drop one that has grown old.
-  try { const mc = JSON.parse(fs.readFileSync(path.join(OUT, 'macro.json'), 'utf8')); if (mc && mc.v === 1) for (const k of ['mvrv', 'dxy', 'funding']) if (mc[k] && mc[k].v === 1) snap[k] = mc[k]; } catch (_) {}
-  for (const k of ['mvrv', 'dxy', 'funding']) if (!snap[k] && old[k]) snap[k] = old[k];
+  try { const mc = JSON.parse(fs.readFileSync(path.join(OUT, 'macro.json'), 'utf8')); if (mc && mc.v === 1) for (const k of ['mvrv', 'dxy', 'funding', 'stables']) if (mc[k] && mc[k].v === 1) snap[k] = mc[k]; } catch (_) {}
+  for (const k of ['mvrv', 'dxy', 'funding', 'stables']) if (!snap[k] && old[k]) snap[k] = old[k];
 
   // 150 coins: the first 100 are the list; Altcoin Season needs the top 100 *after* leaving out stablecoins etc.
   const MK = p => `${API}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${p}&sparkline=true&price_change_percentage=24h%2C7d%2C30d`;
