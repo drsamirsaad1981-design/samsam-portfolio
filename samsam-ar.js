@@ -747,6 +747,7 @@
   // ════════ Fixes from the real portfolio (17 Nov, afternoon) ════════
   R(new RegExp('^' + MRX + ' (\\d{4})$'), function (_, m, y) { return MON[m] + ' ' + y; });
   R(/^(\d+) days ago$/, function (_, d) { return 'منذ ' + pl(d, 'يوم', 'يومين', 'أيام', 'يوم'); });
+  R(/^(\d+) trading days$/, function (_, d) { return n(d) + (+d >= 3 && +d <= 10 ? ' أيام تداول' : ' يوم تداول'); });   // under the ETF card's small bars
   R(/^Stablecoins hidden \((.+)\)$/, function (_, l) { return 'العملات المستقرة مخفية (' + n(l) + ')'; });
   R(/^of (\d+)$/, 'من $1');
   R(/^of (\d+) beat BTC$/, 'من $1 تفوقت على BTC');

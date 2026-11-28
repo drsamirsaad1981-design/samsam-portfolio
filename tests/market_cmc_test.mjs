@@ -108,6 +108,7 @@ fs.rmSync(dir2, { recursive: true }); srv.close();
   const vm_ = await import('node:vm'), ctx = { window: {}, location: { hostname: '', pathname: '/' }, localStorage: { getItem() { return null; }, setItem() {} }, navigator: {}, fetch() {} };
   vm_.runInNewContext(fs.readFileSync(path.join(ROOT_, 'samsam-market.js'), 'utf8'), ctx); const M = ctx.window.SamsamMarket;
   const figr = { id: 'figure-heloc', sym: 'FIGR_HELOC', name: 'Figure Heloc', rank: 9, price: 1.005, ch24: -5.46, spark: Array.from({ length: 40 }, (_, i) => 1 + 0.06 * Math.sin(i)) };   // its quote swings: the "hardly moved" rule alone would miss it
+  check('…hidden WITH the stablecoins but never named as one (the "Stablecoins hidden (…)" line leaves it out of its examples)', M.PEG_ONLY.test('FIGR_HELOC') && !M.PEG_ONLY.test('USDT') && !M.PEG_ONLY.test('USDS'));
   check('…the Market Hub hides it with the stablecoins and Altcoin Season does not count it, though its quote moves 5% a day', M.isStable(figr) && M.isExcluded(figr) && !M.flat(figr, 0.015) && !M.isStable({ id: 'solana', sym: 'SOL', name: 'Solana', price: 150, spark: figr.spark.map(v => v * 150) }));
 }
 // the app (samsam-market.js): CoinMarketCap's numbers from the snapshot, moved live by CoinGecko's change since then

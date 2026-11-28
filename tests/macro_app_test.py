@@ -111,6 +111,10 @@ with sync_playwright() as p:
         for label, part in (('a part 7 hours old', funding(hours=7)), ('no part', None)):
             cur['s'] = snap(funding=part); hub()
             check(f'{name}: {label} → the card is not shown (never a stale rate)', not pg.is_visible('#fundCard'))
+        # the "Stablecoins hidden (…)" line names stablecoins only: FIGR_HELOC is hidden with them but is not named as one
+        cur['s'] = snap(mvrv=mvrv(), dxy=dxy(), funding=funding()); hub()
+        sn = pg.evaluate("(()=>{const keep=topRows;try{topRows=[{id:'bitcoin',sym:'BTC',name:'Bitcoin',price:60000},{id:'tether',sym:'USDT',name:'Tether',price:1},{id:'usd-coin',sym:'USDC',name:'USDC',price:1},{id:'figure-heloc',sym:'FIGR_HELOC',name:'Figure Heloc',price:1.005},{id:'usds',sym:'USDS',name:'USDS',price:1},{id:'ethena-usde',sym:'USDE',name:'Ethena USDe',price:1}];paintStableNote();return {t:mkStable.innerText.replace(/\\s+/g,' ').trim(),hid:topRows.filter(r=>SamsamMarket.isStable(r)).map(r=>r.sym),lines:Math.round(mkStable.querySelector('span:not([data-ic])')?mkStable.getBoundingClientRect().height:0)}}finally{topRows=keep;paintStableNote()}})()")
+        check(f'{name}: "Stablecoins hidden (USDT, USDC, USDS, USDE…)" — FIGR_HELOC is among the hidden rows but not among the names', sn and sn['hid'] == ['USDT', 'USDC', 'FIGR_HELOC', 'USDS', 'USDE'] and 'Stablecoins hidden (USDT, USDC, USDS, USDE…)' in sn['t'] and 'FIGR' not in sn['t'], sn)
         # ── Market Hub: MVRV in the rainbow card ──
         cur['s'] = snap(mvrv=mvrv(), dxy=dxy(), funding=funding()); pg.evaluate("localStorage.setItem('samsam_mkt_rb_open','1')"); hub()
         mv = clean(pg.inner_text('#rbMvrv')).replace('\n', ' ')

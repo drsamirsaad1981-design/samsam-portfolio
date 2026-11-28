@@ -338,6 +338,7 @@
     //  exchange trades; its thin quote moves several percent a day, so the "hardly moved" rule below does not catch it,
     //  and at rank 9 by size it showed up as a top-ten coin and a daily "worst". Samir, 28 Nov 2026.)
     // The ticker list is the same in samsam-coins.js and tools/alerts-core.mjs — market_cmc_test.mjs holds them equal.
+    PEG_ONLY: /^(FIGR_HELOC)$/,   // hidden WITH the stablecoins, never NAMED as one (the "Stablecoins hidden (…)" line)
     isStable: function (c) {
       var s = String(c.sym || '').toUpperCase(), n = (c.name || '').toLowerCase();
       if (/^(USDT|USDC|DAI|FDUSD|USDE|TUSD|PYUSD|USDS|BUSD|USD1|RLUSD|FRAX|USDD|GUSD|EURC|EURS|USDX|USDF|USDG|USDTB|BFUSD|SUSDE|SUSDS|USD0|LUSD|CRVUSD|GHO|XAUT|PAXG|BSC-USD|USDP|USDB|USDA|DOLA|USDL|USDY|BUIDL|USTB|USYC|OUSG|FDIT|USX|AUSD|DEUSD|USR|RUSD|FIGR_HELOC)$/.test(s)) return true;

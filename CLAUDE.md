@@ -55,7 +55,12 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   these readings are from 2020–2021 … only a few episodes: 21 … 27") — his words: without them the numbers read as a rule.
 - **Pegged, not a coin**: one ticker list in three places (`samsam-market.js` → `isStable`, `samsam-coins.js`,
   `tools/alerts-core.mjs` → `STABLE_RX`; `market_cmc_test.mjs` holds them equal). **FIGR_HELOC is in it** (28 Nov, his
-  call): Figure's tokenized home-equity loans, valued near $1, on no exchange — it sat at rank 9 as a "coin".
+  call): Figure's tokenized home-equity loans, valued near $1, on no exchange — it sat at rank 9 as a "coin". Hidden
+  with them but **never named as one**: the "Stablecoins hidden (…)" line leaves it out of its examples (`PEG_ONLY`).
+- **The three folded cards of the Market Hub each carry a small picture** (28 Nov): ETF Flows — 14 small bars (the last
+  14 trading days of the chosen BTC / ETH, green above the line / red under it: a flow is a signed amount, so the profit
+  and loss tokens are right here) with "Last 7 days …" and "14 trading days" under them; the rainbow — its strip; BTC
+  funding — its bar. Each gives way to the full view when its card opens (one picture of a thing at a time).
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -360,6 +365,15 @@ Twelfth round (28 Nov 01:30 Riyadh, three asks one after another from his phone)
 - The bar shows on the closed card too (`#fdFold`, emptied when the card opens: one `#fdBar` at a time).
 - FIGR_HELOC joins the stablecoin list: hidden with them in the Market Hub, out of Altcoin Season's count, never a
   best / worst coin in the bot or the AI's facts. The Worker was rebuilt for it.
+
+Thirteenth round (28 Nov morning, his "نفذ" on four points for the folded ETF card):
+- ETF Flows, closed: `#etfFold` in `market.html` (`paintEtfFold`) — 14 bars 28 px high on one scale with the zero line
+  where ins and outs meet (as the chart inside), and a two-sided line: "Last 7 days −$2.51B" (the open card's own sum, 5
+  trading days) · "14 trading days". The closed card was 44 px beside 155 (rainbow) and 100 (funding); now about 100.
+- The closed header follows the chosen asset ("ETH −$…" once ETH is picked; it always said BTC).
+- Both ETF charts run oldest → newest from the left in Arabic too (`direction: ltr`; the chart inside was mirrored).
+- FIGR_HELOC is out of the "Stablecoins hidden (USDT, USDC, USDS, USDE…)" examples: the line is one line again.
+- His second screenshot of the night showed no rainbow card; he confirmed it is fine on the screen — nothing to fix.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
