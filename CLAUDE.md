@@ -414,8 +414,18 @@ Fourteenth round (28 Nov midday, batch A of two — his four answers: "نبض ا
   closed — the total, 30 small daily bars, net 7 / 30 days; open — the biggest coins and their month). Agreed before
   building: the daily change is counted in UNITS, not dollars (a de-peg must not read as money leaving); the ⓘ says
   "usually demand for cash inside crypto", not "new money entered"; the difference from USDT dominance is said (an
-  amount against a share); the biggest coins come from the data. The lab's section F (`tools/lab/macro.mjs`) asks the
-  source first; its numbers go in the Project doc.
+  amount against a share); the biggest coins come from the data. The lab's section F (`tools/lab/macro.mjs`) asked the
+  source first — **the run of 28 Nov 09:27 UTC (the Project doc "market-hub-sections-and-stablecoin-lab")**: DefiLlama
+  answers from GitHub with no key in under 60 ms, daily since 29 Nov 2017 with no gap, up to the day; 357 dollar-pegged
+  coins, $282.8B (92% fiat-backed; tokenized treasuries and FIGR_HELOC are not in it); by size USDT 61% · USDC 25% · USDe ·
+  DAI · USDS · RLUSD (not the order in his note); now −$16.4B in 30 days (−5.5%), 25 of 30 days down. Units against
+  dollars differ by 0.15% today but by billions on de-peg days (9 May 2022: −$0.9B in units, −$5.4B at price). CoinGecko's
+  category agrees within 1.3%. Over 95 months that do not overlap the link with Bitcoin is weak (0.26 the same month, 0.22
+  the next; after a month the supply shrank Bitcoin's median next month was −0.7% against +2.0% usually). To handle in
+  the card: a coin that appears in the list overnight (USDX, $683M with no past) is not money made, and DAI ↔ USDS moves
+  are transfers; take the total and its change from the history call, the breakdown from the list; name the source.
+- The first live numbers of the new card (28 Nov 09:27 UTC): Pi Cycle 51.2% — higher than 35.5% of days since 2012
+  (lowest 28.7% on 30 Sep 2022, highest 122.8%); MVRV 1.13 — higher than 16.7% (lowest 0.56 in Jan 2015, highest 5.88).
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
