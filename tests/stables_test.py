@@ -145,7 +145,7 @@ with sync_playwright() as p:
         nt = pg.evaluate(TXT, 'sbNote')
         check(f'{name}: Arabic open — "في التداول · {dd.day} {MA[dd.month - 1]} {dd.year}", يوم واحد / 7 أيام / 30 يوماً / سنة, the table\'s heads and "جديدة", the note with "DefiLlama"', pg.evaluate(TXT, 'sbDay') == f'في التداول · {dd.day} {MA[dd.month - 1]} {dd.year}'
               and [x.split(' ' + ('−' if '−' in x else '+'))[0] for x in st] == ['يوم واحد', '7 أيام', '30 يوماً', 'سنة'] and tb[:4] == ['العملة', 'المعروض', 'الحصة', '30 يوماً'] and tb[4:8] == ['USDT', '$173.51B', '61.6%', '−4.05%'] and tb[19] == 'جديدة'
-              and nt.startswith('العملات المستقرة المربوطة بالدولار، محسوبة بعدد العملات لا بسعر السوق') and '357' not in nt and 'والعملة التي يبقى سعرها تحت $0.90 لا تُحسب' in nt and 'قراءة للسيولة، وليست توقعاً للسعر' in nt and 'المصدر: DefiLlama' in nt, [st, tb[:8], nt])
+              and nt.startswith('العملات المستقرة المربوطة بالدولار، محسوبة بعدد العملات لا بسعر السوق') and '357' not in nt and 'والعملة التي تبقى تحت $0.90 لا تُحسب' in nt and 'يبقى' not in nt and 'قراءة للسيولة، وليست توقعاً للسعر' in nt and 'المصدر: DefiLlama' in nt, [st, tb[:8], nt])
         dx = pg.evaluate("(()=>{const b=[...document.querySelectorAll('#sbDay bdi')].map(e=>[e.textContent,e.getBoundingClientRect().left]);return {b:b,span:document.getElementById('sbSpan').innerText.replace(/[\\u2066-\\u2069]/g,'').trim()}})()")
         d0 = today - datetime.timedelta(days=29)
         check(f'{name}: Arabic — the date reads from the right (the day right of the year), and the days\' span is said in words: "من {d0.day} {MA[d0.month - 1]} إلى {dd.day} {MA[dd.month - 1]}" — no arrow in an Arabic line',
@@ -158,7 +158,7 @@ with sync_playwright() as p:
         h = pg.evaluate("(()=>{const c=document.querySelector('.cph');return c?c.innerText.replace(/[\\u2066-\\u2069]/g,'').replace(/\\s+/g,' '):null})()"); hl = pg.evaluate(LOOSE, '.cph')
         check(f'{name}: Arabic ⓘ — "ما قيس" with its limits (95 شهراً, ضعيفة, 0.26, 0.22, −0.7%, +2.0%, 24 شهراً فقط, 2022–2023), "هيمنة USDT", the source — every number and Latin name a left-to-right piece, no "و" stuck to a number',
               h and 'معروض العملات المستقرة' in h and 'ما قيس' in h and '95 شهراً غير متداخلة' in h and 'ضعيفة' in h and '0.26' in h and '0.22' in h and '−0.7%' in h and '+2.0% في المعتاد' in h and '24 شهراً فقط' in h and '2022–2023' in h and 'هيمنة USDT' in h
-              and 'يُحسب بعدد العملات لا بسعر السوق' in h and 'تحت $0.90 يومين متتاليين لا تُحسب دولاراً' in h and 'وليست توقعاً للسعر' in h and 'المصدر: DefiLlama' in h and hl == [] and not __import__('re').search(r'و\d', h), [h, hl])
+              and 'يُحسب بعدد العملات لا بسعر السوق' in h and 'والعملة التي تبقى تحت $0.90 يومين متتاليين لا تُحسب دولاراً' in h and 'وليست توقعاً للسعر' in h and 'المصدر: DefiLlama' in h and hl == [] and not __import__('re').search(r'و\d', h), [h, hl])
         pg.keyboard.press('Escape'); pg.wait_for_timeout(250)
         av = pg.evaluate("[...document.querySelectorAll('#bvPi .bv-n')].map(e=>e.innerText.replace(/[\\u2066-\\u2069]/g,'').trim())")
         i = av.index('100% هو التقاطع') if '100% هو التقاطع' in av else -9

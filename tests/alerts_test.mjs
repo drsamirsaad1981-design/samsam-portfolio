@@ -418,6 +418,19 @@ check('all texts Telegram-safe', all.every(okHtml));
     let worst = 0, which = ''; for (const lang of ['en', 'ar']) for (const rate of [0.1234, 0.0123, 0.0044, -0.0044, -0.1234]) { f.funding = fm(rate); f.dxy.ch24 = -1.23; f.dxy.price = 103.872; for (const l of macroLines(W[lang], f, T0)) { const k = [...plain(l)].length; if (k > worst) { worst = k; which = l; } } }
     check(`…every line fits a phone in every state and both languages (longest ${worst} ≤ 40)`, worst <= 40 && macroLines(W.en, f, T0).every(okHtml), which);
     check('…a funding part over 6 hours old, or a dollar quote over 5 days old, is not shown', macroLines(W.en, f, T0 + 7 * 36e5).length === 1 && macroLines(W.en, f, T0 + 6 * DAY).length === 0 && macroLines(W.en, mk({ now: T0 }), T0).length === 0);
+    { // 🪙 the dollar-pegged supply: after the dollar and funding lines; hidden when the part is old or missing
+      const g = mk({ now: T0 }), day = new Date(T0).toISOString().slice(0, 10), part = (total, d7, d30) => ({ v: 1, day, total, tot: Array.from({ length: 31 }, (_, i) => i === 0 ? total - d30 : i === 23 ? total - d7 : i === 30 ? total : null), y1: null, top: [], src: 'DefiLlama' });
+      g.dxy = f.dxy; g.funding = fm(0.0044); g.stables = part(281.57e9, -1.25e9, -16.38e9);
+      const en = macroLines(W.en, g, T0), ar = macroLines(W.ar, g, T0);
+      check('🪙 stablecoin supply in /market: the total with its source, then the net change of 7 and 30 days — after the dollar and funding lines', en.length === 5 && en[3] === '🪙 Stablecoins <b>$281.57B</b> · DefiLlama' && en[4] === '<i>7 days −$1.25B · 30 days −$16.38B</i>' && /^💵/.test(en[0]) && /^⚖️/.test(en[1]), en);
+      check('…Arabic: each line opens with an Arabic word (never a digit)', ar[3] === 'العملات المستقرة: <b>$281.57B</b> · DefiLlama' && ar[4] === '<i>آخر 7 أيام −$1.25B · 30 يوماً −$16.38B</i>', ar);
+      g.stables = part(1281.57e9, 250e6, 0.4e6); const sm = macroLines(W.en, g, T0);
+      check('…a rise has its plus, under a billion it is in millions, and a change that rounds to nothing has no sign', sm[3] === '🪙 Stablecoins <b>$1281.57B</b> · DefiLlama' && sm[4] === '<i>7 days +$250M · 30 days $0M</i>', sm);
+      let w2 = 0, wl = ''; for (const lang of ['en', 'ar']) for (const [tt, a, b] of [[1281.57e9, -116.38e9, -216.38e9], [281.57e9, -1.25e9, -16.38e9], [99e9, 999e6, -999e6]]) { g.stables = part(tt, a, b); for (const l of macroLines(W[lang], g, T0).slice(3)) { const k = [...plain(l)].length; if (k > w2) { w2 = k; wl = l; } } }
+      check(`…both lines fit a phone in both languages, even with a trillion and hundred-billion moves (longest ${w2} ≤ 40)`, w2 <= 40 && macroLines(W.ar, g, T0).every(okHtml), wl);
+      g.stables = { ...part(281.57e9, -1.25e9, -16.38e9), day: new Date(T0 - 6 * DAY).toISOString().slice(0, 10) };
+      check('…a part 6 days old, or none, adds no line; a missing 7-day figure leaves the 30-day one', macroLines(W.en, g, T0).length === 3 && (() => { const p = part(281.57e9, -1.25e9, -16.38e9); p.tot[23] = null; g.stables = p; return macroLines(W.en, g, T0)[4] === '<i>30 days −$16.38B</i>'; })(), macroLines(W.en, g, T0));
+    }
     f.dxy.ch24 = -0.003; const z = macroLines(W.en, f, T0)[0]; f.dxy.ch24 = -0.006; const z2 = macroLines(W.en, f, T0)[0];
     check('…a change that rounds to 0.00 has no sign and a white dot (never "🔴 −0.00%"); −0.006 is −0.01', z === '💵 Dollar index  <b>103.87</b> ⚪ 0.00%' && z2 === '💵 Dollar index  <b>103.87</b> 🔴 −0.01%' && pct(-0.004) === '0.00%' && pct(0.004) === '0.00%' && pct(-0.04, 1) === '0.0%' && pct(-1.234) === '−1.23%' && pct(2) === '+2.00%' && pct(null) === '—', [z, z2, pct(-0.004)]);
     check('…/market only: neither the morning brief nor the weekly report carries them', !/Dollar index|BTC funding/.test(brief(summarize(user(), f, T0), f, cfg, T0, true).text + brief(summarize(user(), f, T0), f, cfg, T0, false).text));

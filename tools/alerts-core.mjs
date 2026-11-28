@@ -52,7 +52,7 @@ export const W = {
     btcD: 'BTC dominance', usdtD: 'USDT dominance', ethBtc: 'ETH/BTC', rainbow: 'Rainbow band', pi: 'Pi Cycle', mvrv: 'MVRV', grpS: 'Market structure', grpV: 'Bitcoin valuation', exitLine: (s, v) => `Market structure ${s[0]}/${s[1]} · Bitcoin valuation ${v[0]}/${v[1]}`, allExit: 'Every exit condition is met — your exit zone',
     piLine: (r, lvl) => `The 111-day average is ${r}% of twice the 350-day one · your level ${lvl}%`,
     mvrvLine: (r, lvl) => `Market value ÷ realized value: ${r} · your level ${lvl}`, mvrvCost: c => `Bitcoin's realized market cost: ${c}`, srcCM: 'Source: Coin Metrics',
-    dxy: 'Dollar index', fundName: 'BTC funding', fundPer: 'per 8 h', fundVen: n => `${n} venues`, fundNo: a => `no ${a.join(', ')}`,
+    stName: 'Stablecoins', stD: n => `${n} days`, dxy: 'Dollar index', fundName: 'BTC funding', fundPer: 'per 8 h', fundVen: n => `${n} venues`, fundNo: a => `no ${a.join(', ')}`,
     rbName: 'Bitcoin rainbow', rbBand: b => `band ${b} of 9`, rbVs: v => Math.abs(v) < 0.5 ? 'on the trend line' : `${Math.round(Math.abs(v))}% ${v < 0 ? 'under' : 'over'} the trend line`,
     rbVsS: v => Math.abs(v) < 0.5 ? 'on the line' : `${v < 0 ? '−' : '+'}${Math.round(Math.abs(v))}% vs the line`, rbPend: b => `Last close: band ${b} · one more confirms`,
     rbUp: (b, n) => `Bitcoin moved up to band ${b} of 9 · ${n}`, rbDown: (b, n) => `Bitcoin moved down to band ${b} of 9 · ${n}`,
@@ -85,7 +85,7 @@ export const W = {
     btcD: 'هيمنة BTC', usdtD: 'هيمنة USDT', ethBtc: 'ETH/BTC', rainbow: 'نطاق قوس قزح', pi: 'مؤشر Pi Cycle', mvrv: 'مؤشر MVRV', grpS: 'هيكل السوق', grpV: 'تقييم البيتكوين', exitLine: (s, v) => `هيكل السوق ${s[0]} من ${s[1]} · تقييم البيتكوين ${v[0]} من ${v[1]}`, allExit: 'تحققت كل شروط الخروج — منطقة الخروج',
     piLine: (r, lvl) => `متوسط 111 يوماً يساوي ${r}% من ضعف متوسط 350 يوماً · مستواك ${lvl}%`,
     mvrvLine: (r, lvl) => `القيمة السوقية ÷ القيمة المحققة: ${r} · مستواك ${lvl}`, mvrvCost: c => `متوسط تكلفة البيتكوين المحققة للسوق: ${c}`, srcCM: 'المصدر: Coin Metrics',
-    dxy: 'مؤشر الدولار', fundName: 'تمويل البيتكوين', fundPer: 'لكل 8س', fundVen: n => `${n} منصات`, fundNo: a => `بدون ${a.join(' و ')}`,
+    stName: 'العملات المستقرة', stD: n => (n === 7 ? '7 أيام' : `${n} يوماً`), dxy: 'مؤشر الدولار', fundName: 'تمويل البيتكوين', fundPer: 'لكل 8س', fundVen: n => `${n} منصات`, fundNo: a => `بدون ${a.join(' و ')}`,
     rbName: 'قوس قزح البيتكوين', rbBand: b => `النطاق ${b} من 9`, rbVs: v => Math.abs(v) < 0.5 ? 'على خط الاتجاه' : `${v < 0 ? 'تحت' : 'فوق'} خط الاتجاه بـ ${Math.round(Math.abs(v))}%`,
     rbVsS: v => Math.abs(v) < 0.5 ? 'على الخط' : `${v < 0 ? 'أقل من' : 'أعلى من'} الخط بـ ${Math.round(Math.abs(v))}%`, rbPend: b => `آخر إغلاق: النطاق ${b} · إغلاق آخر يؤكده`,
     rbUp: (b, n) => `البيتكوين صعد إلى النطاق ${b} من 9 · ${n}`, rbDown: (b, n) => `البيتكوين نزل إلى النطاق ${b} من 9 · ${n}`,
@@ -348,12 +348,18 @@ export function rainbowLines(t, m, now) {
 // 💵 the dollar index and ⚖️ BTC funding in /market: the number, then (funding) what it is made of — how many venues, and
 // the big ones that are NOT in it, by name. Short lines: each fits a phone in every state and both languages.
 export function macroLines(t, m, now) {
-  const ar = t === W.ar, out = [], d = C.dxyNow(m && m.dxy, now), f = C.fundingNow(m && m.funding, now);
+  const ar = t === W.ar, out = [], d = C.dxyNow(m && m.dxy, now), f = C.fundingNow(m && m.funding, now), s = C.stablesNow(m && m.stables, now);
   if (d) { const c = d.ch24 != null ? +(+d.ch24).toFixed(2) : null, tail = c != null ? ` ${dot(c)} ${pct(c)}` : '';   // (the dot follows the rounded change: no red dot beside "0.00%")
     out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${tail}` : `💵 ${t.dxy}  <b>${d.price.toFixed(2)}</b>${tail}`); }
   if (f) { const r = `${f.rate < 0 ? '−' : '+'}${Math.abs(f.rate).toFixed(4)}%`, w = C.fundingWord(f.rate, ar, true);
     out.push(ar ? `${t.fundName}: <b>${r}</b> · ${w}` : `⚖️ ${t.fundName} <b>${r}</b> · ${w}`);
     out.push(ar ? `<i>${[t.fundVen(f.n) + (f.missing.length ? ' ' + t.fundNo(f.missing) : ''), t.fundPer].join(' · ')}</i>` : `<i>${[t.fundPer, t.fundVen(f.n)].concat(f.missing.length ? [t.fundNo(f.missing)] : []).join(' · ')}</i>`); }
+  // the dollar-pegged supply (DefiLlama, counted in coins — samsam-core.js → stablesNow): the total with its source, then
+  // the net change of 7 and 30 days. An Arabic line opens with an Arabic word ("آخر 7 أيام"), never with a digit.
+  if (s) { const B = v => '$' + (Math.abs(v) / 1e9).toFixed(2) + 'B', net = v => { const a = Math.abs(v), r = a >= 1e9 ? +(a / 1e9).toFixed(2) : Math.round(a / 1e6); return (!r ? '' : v < 0 ? '−' : '+') + (a >= 1e9 ? '$' + (a / 1e9).toFixed(a >= 1e11 ? 1 : 2) + 'B' : '$' + Math.round(a / 1e6) + 'M'); };   // (a hundred billions: one decimal — the line stays within 40)
+    const parts = [[7, s.d7], [30, s.d30]].filter(x => x[1] != null).map(x => `${t.stD(x[0])} ${net(x[1])}`);
+    out.push(ar ? `${t.stName}: <b>${B(s.total)}</b> · ${esc(s.src)}` : `🪙 ${t.stName} <b>${B(s.total)}</b> · ${esc(s.src)}`);
+    if (parts.length) out.push(`<i>${ar ? 'آخر ' : ''}${parts.join(' · ')}</i>`); }
   return out;
 }
 export function marketLines(t, m) {

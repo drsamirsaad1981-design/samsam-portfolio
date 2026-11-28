@@ -84,8 +84,12 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   **A coin that is no longer a dollar is left out** (28 Nov, his rule): its price is under $0.90 (`PEG_MIN`) on **two
   days running** (the first day seen it still counts — one bad price in one run must take nothing out); its supply NOW
   comes off the total and off every day kept, so leaving it out is not itself a fall. **A coin with NO price stays in**
-  (a gap in the data, not a fall — his call is open, see the sixteenth round). The note names no count of coins:
-  "Dollar-pegged stablecoins" (العملات المستقرة المربوطة بالدولار).
+  (a gap in the data, not a fall — **his decision, 28 Nov**: the live coins and the new ones matter more than the 1.13%
+  of level; the dead ones' supply is frozen and does not touch the changes). The note names no count of coins:
+  "Dollar-pegged stablecoins" (العملات المستقرة المربوطة بالدولار); Arabic says «والعملة التي تبقى تحت $0.90» (his wording).
+  **Bot**: two lines at the end of `/market` (`macroLines`: the total with "· DefiLlama", then the net change of 7 and 30
+  days — an Arabic line opens with an Arabic word: "آخر 7 أيام …"), not in the brief or the weekly report; the AI's
+  `get_market` carries `stablecoin_supply` with the note's limits.
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -116,7 +120,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
 | 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the labs `tools/lab/rainbow.mjs` and `tools/lab/macro.mjs` (trials only: they run on GitHub, write nothing, and report in the run's summary). The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
 | MVRV · 💵 dollar index · ⚖️ BTC funding | the job `tools/update-macro.mjs` → `m/macro.json` (+ `m/mvrv.json`, MVRV's whole history) — its three parts are copied into `m/market.json` (`mvrv`, `dxy`, `funding`) by `update-market.mjs`; readers and the funding wording in `samsam-core.js` (`mvrvRead`, `dxyNow`, `fundingNow`, `fundingRead` / `FUNDING_WORDS`); Exit row `samsam-exit.js`; Market Hub: `samsam-funding.js` (card), the Bitcoin Pi Cycle + Bitcoin MVRV card `samsam-btcval.js` (`#valCard`; `histOf` / `histPos` in the core), the dollar card in `samsam-assets.js` (Metals tab); Plan line `costNote` in `accumulation.html`; bot `macroLines` (`alerts-core.mjs`, in /market), `macroFacts` (`ai.mjs`); the lab `tools/lab/macro.mjs` |
-| Stablecoin Supply | the job's fourth part `stablesPart` / `stablesFrom` in `tools/update-macro.mjs` (`/stablecoincharts/all` for the total and its days, `/stablecoins` for the breakdown; the last breakdown or the last part stays when DefiLlama is silent) → `m/macro.json` → `stables` in `m/market.json`; reader `stablesNow` in `samsam-core.js` (drops a part over 4 days old); card `samsam-stables.js` (`#stableCard`, under ETF Flows); hint `stables`; tests `stables_test.py`, `macro_test.mjs`, `market_cmc_test.mjs` |
+| Stablecoin Supply | the job's fourth part `stablesPart` / `stablesFrom` in `tools/update-macro.mjs` (`/stablecoincharts/all` for the total and its days, `/stablecoins` for the breakdown; the last breakdown or the last part stays when DefiLlama is silent) → `m/macro.json` → `stables` in `m/market.json`; reader `stablesNow` in `samsam-core.js` (drops a part over 4 days old); card `samsam-stables.js` (`#stableCard`, under ETF Flows); hint `stables`; bot `macroLines` (`alerts-core.mjs`), AI `macroFacts` → `stablecoin_supply` (`ai.mjs`), the Worker's market object (`data.mjs` → `stables`); tests `stables_test.py`, `macro_test.mjs`, `market_cmc_test.mjs`, `alerts_test.mjs`, `tg_bot_test.mjs` |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -127,7 +131,8 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 One answer everywhere: a number shown in two places must come from one function (e.g. `wealthNow()` for the Net worth card,
 the PDF, the CSV and the AI report; `summarize().wealth` in the bot; `zakatPool` / `zakatYear` for zakat in app and bot;
 `rainbowRead()` for the rainbow band in the bot's line, the alert, the Exit page and the Market Hub card; `mvrvRead()`,
-`dxyNow()`, `fundingNow()` + `fundingRead()` for MVRV, the dollar index and BTC funding in the app, the bot and the radar).
+`dxyNow()`, `fundingNow()` + `fundingRead()` for MVRV, the dollar index and BTC funding in the app, the bot and the radar;
+`stablesNow()` for the stablecoin supply in the card, the bot's lines and the AI's facts).
 
 ## Build, test, release
 
@@ -476,6 +481,15 @@ Sixteenth round (28 Nov 15:00 Riyadh, his note after the phone's screenshots —
 - His phone's two screenshots were minutes apart: USDT $173.51B in one and $173.52B in the other with the same total —
   the total is the day's reading, the breakdown is the list's and moves with each run.
 - The bot and `guide.json`: after the screen has settled (his words).
+
+Seventeenth round (28 Nov 16:30 Riyadh, his two decisions: unpriced coins stay in; "the screen has settled — connect the bot"):
+- Bot: `/market` ends with "🪙 Stablecoins $281.57B · DefiLlama" and "7 days −$1.25B · 30 days −$16.38B" (Arabic:
+  "العملات المستقرة: … · DefiLlama" / "آخر 7 أيام … · 30 يوماً …"); a move of $100B+ has one decimal so the line stays
+  within 40. `stablesNow` passes `out` (what was left out) to the AI's facts. The Worker was rebuilt and deployed.
+- Arabic, his wording: «التي تبقى» for «التي يبقى» — applied as «والعملة التي تبقى تحت $0.90» (without «سعرها»: with it
+  the verb belongs to the price and must stay «يبقى»), in the card's note and in the ⓘ.
+- **`guide.json` was NOT pushed with this**: the text of its two changed lines (the `/market` line in "Coins and the
+  market", the Market Hub line in "The app") was shown to him first — it posts "New in the guide" to the channel.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state

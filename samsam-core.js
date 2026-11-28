@@ -994,7 +994,7 @@ export function fundingNow(F, now = Date.now()) {
 // → { day, total, d1 / d7 / d30 / d365 (net change in coins, null when the older day is missing), p7 / p30 / p365 (%),
 //     bars: [[day, change]] — up to the last 30 daily changes, oldest first,
 //     top: [{ sym, name, circ, share (% of the total), m30 (% over a month, null for a coin that was not listed then), isNew, price }],
-//     n (coins counted), src }
+//     n (coins counted), out: { n, sum } — the coins left out for trading under $0.90 (null in an older part), src }
 export function stablesNow(S, now = Date.now()) {
   if (!S || !(+S.total > 0) || !S.day || !Array.isArray(S.tot) || S.tot.length < 2) return null;
   const t = Date.parse(S.day + 'T00:00:00Z'); if (!isFinite(t) || now - t > 5 * 864e5) return null;
@@ -1005,7 +1005,7 @@ export function stablesNow(S, now = Date.now()) {
   const top = (Array.isArray(S.top) ? S.top : []).filter(x => x && x.sym && +x.circ > 0).map(x => ({ sym: String(x.sym), name: String(x.name || x.sym), circ: +x.circ, share: +x.circ / total * 100,
     m30: +x.m30 > 0 ? (+x.circ / +x.m30 - 1) * 100 : null, isNew: !(+x.m30 > 0), price: +x.price > 0 ? +x.price : null }));
   return { day: S.day, total, d1: back(1), d7: back(7), d30: back(30), d365: y1 ? total - y1 : null, p7: pct(back(7), T[n - 8]), p30: pct(back(30), T[n - 31]), p365: y1 ? (total / y1 - 1) * 100 : null,
-    bars, top, n: +S.n > 0 ? +S.n : null, src: S.src || 'DefiLlama' };
+    bars, top, n: +S.n > 0 ? +S.n : null, out: S.out && +S.out.n >= 0 ? { n: +S.out.n, sum: +S.out.sum || 0, min: +S.out.min || 0.9 } : null, src: S.src || 'DefiLlama' };
 }
 
 // ── 📉 Max drawdown: the deepest fall from a peak, on a profit-% line (perfChartSeries: Value − Net invested ÷ Cost) ──

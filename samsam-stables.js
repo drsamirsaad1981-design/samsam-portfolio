@@ -76,7 +76,7 @@
         s.top.slice(0, 6).map(function (x) { return '<b title="' + E(x.name) + '">' + L(x.sym) + '</b><span class="r">' + L(big(x.circ)) + '</span><span class="r">' + L(x.share.toFixed(1) + '%') + '</span>' +
           (x.isNew ? '<span class="r nw">' + T('new', 'جديدة') + '</span>' : '<b class="r ' + cls(x.m30, 2) + '">' + L(pct(x.m30)) + '</b>'); }).join('') + '</div>' : '') +
       '<p class="sb-note" id="sbNote">' + T('<b>Dollar-pegged stablecoins</b>, counted in coins — not at market price, so a slip in a coin\'s price does not read as money leaving. A coin that stays under ' + L('$0.90') + ' is no longer counted. A move from one coin to another changes the list, not the total. A reading of liquidity, not a forecast of price. Source: DefiLlama, once a day. Not financial advice.',
-        '<b>العملات المستقرة المربوطة بالدولار</b>، محسوبة بعدد العملات لا بسعر السوق — فتراجع سعر عملة لا يُقرأ كأموال خرجت. والعملة التي يبقى سعرها تحت ' + L('$0.90') + ' لا تُحسب. والانتقال من عملة إلى أخرى يغيّر القائمة لا الإجمالي. قراءة للسيولة، وليست توقعاً للسعر. المصدر: ' + L('DefiLlama') + '، مرة في اليوم. ليست نصيحة مالية.') + '</p>';
+        '<b>العملات المستقرة المربوطة بالدولار</b>، محسوبة بعدد العملات لا بسعر السوق — فتراجع سعر عملة لا يُقرأ كأموال خرجت. والعملة التي تبقى تحت ' + L('$0.90') + ' لا تُحسب. والانتقال من عملة إلى أخرى يغيّر القائمة لا الإجمالي. قراءة للسيولة، وليست توقعاً للسعر. المصدر: ' + L('DefiLlama') + '، مرة في اليوم. ليست نصيحة مالية.') + '</p>';
   }
   function paint() {
     if (!el) return;

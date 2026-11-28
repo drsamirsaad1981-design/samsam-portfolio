@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 136f24faf852e742
+// sources-hash: 2411dde0d2845a42
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -959,6 +959,41 @@ function fundingNow(F, now = Date.now()) {
     at: F.at
   };
 }
+function stablesNow(S, now = Date.now()) {
+  if (!S || !(+S.total > 0) || !S.day || !Array.isArray(S.tot) || S.tot.length < 2) return null;
+  const t = Date.parse(S.day + "T00:00:00Z");
+  if (!isFinite(t) || now - t > 5 * 864e5) return null;
+  const T2 = S.tot.map((v) => +v > 0 ? +v : null), n = T2.length, total = +S.total;
+  const back = (k) => n > k && T2[n - 1 - k] != null ? total - T2[n - 1 - k] : null, pct2 = (d, base) => d == null || !(base > 0) ? null : d / base * 100;
+  const bars = [];
+  for (let i = Math.max(1, n - 30); i < n; i++) if (T2[i] != null && T2[i - 1] != null) bars.push([new Date(t - (n - 1 - i) * 864e5).toISOString().slice(0, 10), T2[i] - T2[i - 1]]);
+  const y1 = +S.y1 > 0 ? +S.y1 : null;
+  const top = (Array.isArray(S.top) ? S.top : []).filter((x) => x && x.sym && +x.circ > 0).map((x) => ({
+    sym: String(x.sym),
+    name: String(x.name || x.sym),
+    circ: +x.circ,
+    share: +x.circ / total * 100,
+    m30: +x.m30 > 0 ? (+x.circ / +x.m30 - 1) * 100 : null,
+    isNew: !(+x.m30 > 0),
+    price: +x.price > 0 ? +x.price : null
+  }));
+  return {
+    day: S.day,
+    total,
+    d1: back(1),
+    d7: back(7),
+    d30: back(30),
+    d365: y1 ? total - y1 : null,
+    p7: pct2(back(7), T2[n - 8]),
+    p30: pct2(back(30), T2[n - 31]),
+    p365: y1 ? (total / y1 - 1) * 100 : null,
+    bars,
+    top,
+    n: +S.n > 0 ? +S.n : null,
+    out: S.out && +S.out.n >= 0 ? { n: +S.out.n, sum: +S.out.sum || 0, min: +S.out.min || 0.9 } : null,
+    src: S.src || "DefiLlama"
+  };
+}
 var RAINBOW_NAMES = Object.freeze({
   en: ["Rare historic low", "Deep discount", "Accumulation zone", "Around the trend line", "Above the trend line", "Warming up", "Hot", "Very hot", "Bubble"],
   ar: ["\u0642\u0627\u0639 \u062A\u0627\u0631\u064A\u062E\u064A \u0646\u0627\u062F\u0631", "\u062E\u0635\u0645 \u0639\u0645\u064A\u0642", "\u0645\u0646\u0637\u0642\u0629 \u062A\u062C\u0645\u064A\u0639", "\u062D\u0648\u0644 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647", "\u0641\u0648\u0642 \u062E\u0637 \u0627\u0644\u0627\u062A\u062C\u0627\u0647", "\u0628\u062F\u0627\u064A\u0629 \u0633\u062E\u0648\u0646\u0629", "\u0633\u062E\u0648\u0646\u0629", "\u0633\u062E\u0648\u0646\u0629 \u0639\u0627\u0644\u064A\u0629", "\u0641\u0642\u0627\u0639\u0629"]
@@ -1073,6 +1108,8 @@ var W = {
     mvrvLine: (r, lvl) => `Market value \xF7 realized value: ${r} \xB7 your level ${lvl}`,
     mvrvCost: (c) => `Bitcoin's realized market cost: ${c}`,
     srcCM: "Source: Coin Metrics",
+    stName: "Stablecoins",
+    stD: (n) => `${n} days`,
     dxy: "Dollar index",
     fundName: "BTC funding",
     fundPer: "per 8 h",
@@ -1193,6 +1230,8 @@ var W = {
     mvrvLine: (r, lvl) => `\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0633\u0648\u0642\u064A\u0629 \xF7 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u062D\u0642\u0642\u0629: ${r} \xB7 \u0645\u0633\u062A\u0648\u0627\u0643 ${lvl}`,
     mvrvCost: (c) => `\u0645\u062A\u0648\u0633\u0637 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u0645\u062D\u0642\u0642\u0629 \u0644\u0644\u0633\u0648\u0642: ${c}`,
     srcCM: "\u0627\u0644\u0645\u0635\u062F\u0631: Coin Metrics",
+    stName: "\u0627\u0644\u0639\u0645\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0642\u0631\u0629",
+    stD: (n) => n === 7 ? "7 \u0623\u064A\u0627\u0645" : `${n} \u064A\u0648\u0645\u0627\u064B`,
     dxy: "\u0645\u0624\u0634\u0631 \u0627\u0644\u062F\u0648\u0644\u0627\u0631",
     fundName: "\u062A\u0645\u0648\u064A\u0644 \u0627\u0644\u0628\u064A\u062A\u0643\u0648\u064A\u0646",
     fundPer: "\u0644\u0643\u0644 8\u0633",
@@ -1523,7 +1562,7 @@ function rainbowLines(t, m, now) {
   return out;
 }
 function macroLines(t, m, now) {
-  const ar = t === W.ar, out = [], d = dxyNow(m && m.dxy, now), f = fundingNow(m && m.funding, now);
+  const ar = t === W.ar, out = [], d = dxyNow(m && m.dxy, now), f = fundingNow(m && m.funding, now), s = stablesNow(m && m.stables, now);
   if (d) {
     const c = d.ch24 != null ? +(+d.ch24).toFixed(2) : null, tail = c != null ? ` ${dot(c)} ${pct(c)}` : "";
     out.push(ar ? `${t.dxy}: <b>${d.price.toFixed(2)}</b>${tail}` : `\u{1F4B5} ${t.dxy}  <b>${d.price.toFixed(2)}</b>${tail}`);
@@ -1532,6 +1571,15 @@ function macroLines(t, m, now) {
     const r = `${f.rate < 0 ? "\u2212" : "+"}${Math.abs(f.rate).toFixed(4)}%`, w = fundingWord(f.rate, ar, true);
     out.push(ar ? `${t.fundName}: <b>${r}</b> \xB7 ${w}` : `\u2696\uFE0F ${t.fundName} <b>${r}</b> \xB7 ${w}`);
     out.push(ar ? `<i>${[t.fundVen(f.n) + (f.missing.length ? " " + t.fundNo(f.missing) : ""), t.fundPer].join(" \xB7 ")}</i>` : `<i>${[t.fundPer, t.fundVen(f.n)].concat(f.missing.length ? [t.fundNo(f.missing)] : []).join(" \xB7 ")}</i>`);
+  }
+  if (s) {
+    const B = (v) => "$" + (Math.abs(v) / 1e9).toFixed(2) + "B", net = (v) => {
+      const a = Math.abs(v), r = a >= 1e9 ? +(a / 1e9).toFixed(2) : Math.round(a / 1e6);
+      return (!r ? "" : v < 0 ? "\u2212" : "+") + (a >= 1e9 ? "$" + (a / 1e9).toFixed(a >= 1e11 ? 1 : 2) + "B" : "$" + Math.round(a / 1e6) + "M");
+    };
+    const parts = [[7, s.d7], [30, s.d30]].filter((x) => x[1] != null).map((x) => `${t.stD(x[0])} ${net(x[1])}`);
+    out.push(ar ? `${t.stName}: <b>${B(s.total)}</b> \xB7 ${esc(s.src)}` : `\u{1FA99} ${t.stName} <b>${B(s.total)}</b> \xB7 ${esc(s.src)}`);
+    if (parts.length) out.push(`<i>${ar ? "\u0622\u062E\u0631 " : ""}${parts.join(" \xB7 ")}</i>`);
   }
   return out;
 }
@@ -2019,7 +2067,7 @@ async function loadMarket(ids = [], coins = []) {
     if (s) series[id] = s;
   }));
   const closeF = await cached("close", 10 * 6e4, async () => await getJson(RAW + "p/close.json") || false);
-  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, mvrv: base.m.mvrv || null, dxy: base.m.dxy || null, funding: base.m.funding || null, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
+  const market = { close: closeF && closeF.p ? closeF.p : null, closeDay: closeF && closeF.day || null, top, top500, global: base.m.global, fng: base.m.fng, alt: base.m.alt, parts: base.m.parts, series, altPage: base.alt, etf: base.etf, rainbow: base.m.rainbow || null, mvrv: base.m.mvrv || null, dxy: base.m.dxy || null, funding: base.m.funding || null, stables: base.m.stables || null, cgIds: cg_ids_default, live: {}, idOf, stocks: base.m.stocks || [], metals: base.m.metals || [], fx: base.m.fx || {}, sectors: base.m.sectors || [], whales: base.m.whales || null };
   await liveTopUp(market, all);
   const rows = new Map([...market.top, ...market.top500].map((r) => [r.id, r]));
   const missing = Object.entries(idOf).filter(([S, id]) => !(id && (market.live[id] || rows.get(id) && rows.get(id).price > 0 || series[id]))).slice(0, 3);
@@ -4543,7 +4591,7 @@ function rainbowFacts(m) {
   };
 }
 function macroFacts(m) {
-  const now = Date.now(), mv = mvrvRead(m.mvrv, now), d = dxyNow(m.dxy, now), f = fundingNow(m.funding, now), out = {};
+  const now = Date.now(), mv = mvrvRead(m.mvrv, now), d = dxyNow(m.dxy, now), f = fundingNow(m.funding, now), st = stablesNow(m.stables, now), out = {};
   if (mv) out.bitcoin_mvrv = {
     ratio: mv.v,
     day: mv.day,
@@ -4583,6 +4631,24 @@ function macroFacts(m) {
     open_interest_usd: f.oi,
     not_included: f.missing,
     note: `The mean of ${f.n} venues weighted by open interest${f.missing.length ? " \u2014 WITHOUT " + f.missing.join(" and ") + " (they refuse the address this is read from): always say so" : ""}. Over the last year BTC funding was never above the resting +0.01% per 8 h; "crowded longs" starts at +0.03%, "crowded shorts" at \u22120.01%. It said nothing at the October 2025 top \u2014 a mood reading, not a top signal.`
+  };
+  if (st) out.stablecoin_supply = {
+    total_usd: st.total,
+    day: st.day,
+    change_1_day_usd: st.d1,
+    change_7_days_usd: st.d7,
+    change_7_days_pct: r23(st.p7),
+    change_30_days_usd: st.d30,
+    change_30_days_pct: r23(st.p30),
+    change_1_year_usd: st.d365,
+    change_1_year_pct: r23(st.p365),
+    days_up_of_last_30: st.bars.filter((b) => b[1] > 0).length,
+    days_down_of_last_30: st.bars.filter((b) => b[1] < 0).length,
+    biggest: st.top.slice(0, 6).map((x) => ({ symbol: x.sym, supply_usd: x.circ, share_pct: r23(x.share), change_30_days_pct: x.isNew ? "not listed a month ago" : r23(x.m30) })),
+    coins_counted: st.n,
+    left_out_under_0_90_usd: st.out ? { coins: st.out.n, supply_usd: Math.round(st.out.sum) } : null,
+    source: st.src,
+    note: `Dollar-pegged stablecoins counted in COINS (one coin = one dollar), not at market price \u2014 a slip in a coin's price is not money leaving. A coin priced under $0.90 on two days running is left out (its supply comes off every day too); a coin the source has no price for stays in. Supply up = coins were issued: usually demand for cash inside crypto \u2014 never say "new money entered". It is NOT USDT dominance (that is one coin's share of the market; this is an amount). A move from one coin to another (DAI \u2194 USDS) changes the list, not the total. What was measured over 95 months that do not overlap (2019\u20132026) \u2014 say it with its limits, never as a rule: the link with Bitcoin's price is weak (correlation 0.26 the same month, 0.22 with the next); after a month the supply shrank Bitcoin's median next month was \u22120.7% against +2.0% usually \u2014 only 24 such months, most of them in 2022\u20132023. A reading of liquidity, not a forecast of price. Always name the source.`
   };
   return out;
 }
