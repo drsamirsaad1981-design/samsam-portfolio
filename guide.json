@@ -95,14 +95,14 @@
    "en": [
     "<b>Portfolio</b>: your coins, value, profit and charts. Add a coin with <b>+</b>, or bring trades from an exchange: Performance → <b>Wallets &amp; Exchanges</b> → Import.",
     "<b>Plan</b>: the accumulation plan (targets, DCA) and the <b>Exit Strategy</b> (take-profit steps).",
-    "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, ETF flows, top coins.",
+    "<b>Market Hub</b>: market cap, Fear &amp; Greed, Altcoin Season, dominance, ETF flows, stablecoin supply, top coins.",
     "<b>AI Analysis</b> (🤖): a full report — <i>free</i> with your Claude app (copy → paste), or a quick report for ⭐ premium / your own Claude key.",
     "<b>Settings</b> (⚙️): account, backup, Telegram, AI, display and language, the guide, install on your phone."
    ],
    "ar": [
     "<b>المحفظة</b>: عملاتك وقيمتها والربح والرسوم البيانية. أضف عملة بزر <b>+</b>، أو استورد صفقاتك من منصة: الأداء ← <b>المحافظ والمنصات</b> ← الاستيراد.",
     "<b>الخطة</b>: خطة التجميع (الأهداف والشراء الدوري) و<b>استراتيجية الخروج</b> (خطوات جني الأرباح).",
-    "<b>مركز السوق</b>: القيمة السوقية، والخوف والطمع، وموسم العملات البديلة، والهيمنة، وتدفقات ETF، وأكبر العملات.",
+    "<b>مركز السوق</b>: القيمة السوقية، والخوف والطمع، وموسم العملات البديلة، والهيمنة، وتدفقات ETF، ومعروض العملات المستقرة، وأكبر العملات.",
     "<b>تحليل AI</b> (🤖): تقرير كامل — <i>مجاناً</i> عبر تطبيق Claude (نسخ ← لصق)، أو تقرير سريع للأعضاء المميزين ⭐ أو بمفتاح Claude الخاص بك.",
     "<b>الإعدادات</b> (⚙️): الحساب، والنسخ الاحتياطي، وتليجرام، والذكاء الاصطناعي، والعرض واللغة، والدليل، وتثبيت التطبيق على الجوال."
    ],
@@ -222,14 +222,14 @@
    },
    "en": [
     "Send a ticker — <code>btc</code> or <code>sol eth</code> — for the live price, trend, futures and funding.",
-    "/market — BTC, dominance, Fear &amp; Greed and ETF flows; its 📈 bStocks and 🥇 Metals buttons show US stocks and gold, silver, platinum, copper (/stocks · /metals).",
+    "/market — BTC, dominance, Fear &amp; Greed and ETF flows, then the Bitcoin rainbow band, the dollar index, BTC funding and the stablecoin supply: dollar-pegged coins counted in coins (a coin that stays under $0.90 is not counted; source: DefiLlama); its 📈 bStocks and 🥇 Metals buttons show US stocks and gold, silver, platinum, copper (/stocks · /metals).",
     "/movers — the best and worst coins · /signals — hold / add / sell for your coins.",
     "/portfolio · /plan · /exit — your own numbers.",
     "/balances — your Binance / Gate balances, read with a read-only key you connect in the app (Performance → Wallets &amp; Exchanges → Exchanges)."
    ],
    "ar": [
     "أرسل رمز العملة — <code>btc</code> أو <code>sol eth</code> — لترى السعر المباشر والاتجاه والعقود الآجلة ومعدل التمويل.",
-    "/market — البيتكوين والهيمنة ومؤشر الخوف والطمع وتدفقات ETF؛ وزرّا 📈 bStocks و🥇 المعادن يعرضان الأسهم الأمريكية والذهب والفضة والبلاتين والنحاس (/stocks · /metals).",
+    "/market — البيتكوين والهيمنة ومؤشر الخوف والطمع وتدفقات ETF، ثم نطاق قوس قزح البيتكوين ومؤشر الدولار وتمويل البيتكوين ومعروض العملات المستقرة: العملات المربوطة بالدولار محسوبة بعدد العملات (والعملة التي تبقى تحت $0.90 لا تُحسب؛ المصدر: DefiLlama)؛ وزرّا 📈 bStocks و🥇 المعادن يعرضان الأسهم الأمريكية والذهب والفضة والبلاتين والنحاس (/stocks · /metals).",
     "/movers — الأفضل والأسوأ أداءً · /signals — احتفاظ / تعزيز / بيع لعملاتك.",
     "/portfolio · /plan · /exit — أرقامك الخاصة.",
     "/balances — أرصدتك في Binance و Gate، تُقرأ بمفتاح للقراءة فقط تربطه من التطبيق (الأداء ← المحافظ والمنصات ← المنصات)."

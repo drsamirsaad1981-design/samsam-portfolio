@@ -490,6 +490,11 @@ Seventeenth round (28 Nov 16:30 Riyadh, his two decisions: unpriced coins stay i
   the verb belongs to the price and must stay «يبقى»), in the card's note and in the ⓘ.
 - **`guide.json` was NOT pushed with this**: the text of its two changed lines (the `/market` line in "Coins and the
   market", the Market Hub line in "The app") was shown to him first — it posts "New in the guide" to the channel.
+- **He approved it at 17:31 and chose "with the names"** (one post in the channel instead of two): the `/market` line now
+  names the Bitcoin rainbow band, the dollar index, BTC funding and the stablecoin supply (with the $0.90 rule and
+  "source: DefiLlama"); the Market Hub line names the stablecoin supply. Pushed alone with the rebuilt Worker.
+- His phone's `/market` (17:28) matched: "🪙 Stablecoins $281.57B · DefiLlama" / "7 days −$1.25B · 30 days −$16.38B"
+  after the funding lines.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state
@@ -497,8 +502,9 @@ Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
   (The rainbow alert reaches members with this phase; today they see the line in `/market` and the weekly report.)
 
 Still open:
-1. The members' alerts above; a section in the bot's guide for the rainbow, MVRV, the dollar index and funding (his approval:
-   it posts to the channel).
+1. The members' alerts above. The bot's guide now NAMES the rainbow, the dollar index, funding and the stablecoin
+   supply in its `/market` line (28 Nov); a fuller part of their own — and MVRV / the Pi Cycle in `/exit` — is still
+   not written (his approval: it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its
    shard; 9/9 three times in a row here) — same list. `edit_tx_test.py` needed its retry once on 28 Nov (19/20 on the
