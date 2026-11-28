@@ -437,7 +437,8 @@ Still open:
    it posts to the channel).
 2. `hv_chart_test.py` ("24h range") fails about one run in four and passes on the retry — not looked into yet.
    `asset_classes_app_test.py` needed its retry in both GitHub runs of 27 Nov (8/9 on the first try, at 46/48 of its
-   shard; 9/9 three times in a row here) — same list.
+   shard; 9/9 three times in a row here) — same list. `edit_tx_test.py` needed its retry once on 28 Nov (19/20 on the
+   first try, on a shard that ran 45 minutes instead of 32) — same list.
 3. The PDF and the CSV are in English when the app is Arabic.
 4. The AI button over a card's corner in mid-page (inherent to a floating button; moving it is a design decision).
 
