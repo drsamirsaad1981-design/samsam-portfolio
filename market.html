@@ -18,25 +18,26 @@ if(sessionStorage.getItem('cp-tg-init')){document.documentElement.classList.add(
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0f22">
-<script src="samsam-lang.js?v=202611280934"></script>
-<script src="samsam-ar.js?v=202611280934"></script>
-<script src="samsam-ui.js?v=202611280934"></script>
-<script src="samsam-hints.js?v=202611280934"></script>
-<script src="samsam-arhints.js?v=202611280934"></script>
-<script src="samsam-vault.js?v=202611280934"></script>
-<script src="samsam-labels.js?v=202611280934"></script>
-<script src="samsam-taxonomy.js?v=202611280934"></script>
-<script src="samsam-coins.js?v=202611280934"></script>
-<script src="samsam-import.js?v=202611280934"></script>
-<script src="samsam-wallets.js?v=202611280934"></script>
-<script src="samsam-rewards.js?v=202611280934"></script>
-<script src="samsam-settings.js?v=202611280934"></script>
-<script src="samsam-dropdown.js?v=202611280934"></script>
-<script src="samsam-add.js?v=202611280934"></script>
-<script src="samsam-market.js?v=202611280934"></script>
-<script src="samsam-rainbow.js?v=202611280934"></script>
-<script src="samsam-funding.js?v=202611280934"></script>
-<script src="samsam-assets.js?v=202611280934"></script>
+<script src="samsam-lang.js?v=202611281227"></script>
+<script src="samsam-ar.js?v=202611281227"></script>
+<script src="samsam-ui.js?v=202611281227"></script>
+<script src="samsam-hints.js?v=202611281227"></script>
+<script src="samsam-arhints.js?v=202611281227"></script>
+<script src="samsam-vault.js?v=202611281227"></script>
+<script src="samsam-labels.js?v=202611281227"></script>
+<script src="samsam-taxonomy.js?v=202611281227"></script>
+<script src="samsam-coins.js?v=202611281227"></script>
+<script src="samsam-import.js?v=202611281227"></script>
+<script src="samsam-wallets.js?v=202611281227"></script>
+<script src="samsam-rewards.js?v=202611281227"></script>
+<script src="samsam-settings.js?v=202611281227"></script>
+<script src="samsam-dropdown.js?v=202611281227"></script>
+<script src="samsam-add.js?v=202611281227"></script>
+<script src="samsam-market.js?v=202611281227"></script>
+<script src="samsam-rainbow.js?v=202611281227"></script>
+<script src="samsam-funding.js?v=202611281227"></script>
+<script src="samsam-btcval.js?v=202611281227"></script>
+<script src="samsam-assets.js?v=202611281227"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
 html, body { overscroll-behavior-y: none; }   /* no pull-to-refresh / bounce reload */
@@ -82,6 +83,16 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-vrow .mk-v { font-size: 1.6rem; }
 .mk-vrow .mk-tag { font-size: .74rem; }
 /* ETF flows */
+/* Two headed sections (Market Pulse · Bitcoin Valuation): the heading is a button that folds its section, remembered on
+   this device — the same headed line as the Exit page's groups (no capitals by CSS: title_check.py) */
+.mk-part-h { margin: 18px 0 12px; font: inherit; } #secPulse .mk-part-h { margin-top: 4px; }
+.mk-part-tog { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 6px; width: 100%; padding-bottom: 7px; border-bottom: 1px solid var(--border); font-size: .95rem; font-weight: 800; color: var(--fg); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mk-part-tog:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.mk-part-tog .cp-hint { margin-inline-end: auto; }   /* pushes the chevron to the far end (the svg's own direction is ltr, so a logical margin on IT lands on the wrong side in Arabic) */
+.mk-part-chev { width: 18px; height: 18px; flex: none; color: var(--fg2); transition: transform .2s; }
+.mk-part-tog[aria-expanded="true"] .mk-part-chev { transform: rotate(180deg); }
+.mk-part-b[hidden], .mk-part[hidden] { display: none; }
+.mk-part.shut .mk-part-h { margin-bottom: 14px; }
 .mk-etf { margin-bottom: 14px; gap: 10px; }
 /* closed by default (the Altcoin Season card already shows the last 7 days) — tap the title to open */
 .mk-etf-tog { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; border-radius: 9px; }
@@ -95,6 +106,13 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 .mk-etf-body { display: grid; gap: 10px; } .mk-etf-body[hidden] { display: none; }
 .mk-etf-h { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .mk-etf-h .mk-k small { font-weight: 700; margin-inline-start: 6px; opacity: .75; }
+/* Arabic on a phone: the title is longer, so it keeps one line ("US spot" is in the ⓘ's title and in the note), the
+   closed card's amount takes the next line (like the rainbow's and the funding's), and the BTC / ETH switch its own */
+@media (max-width: 480px) {
+  .cp-ar #etfCard .mk-k { white-space: nowrap; flex: 1 1 auto; } .cp-ar #etfCard .mk-k small { display: none; }
+  .cp-ar #etfCard .mk-etf-tog { flex-wrap: wrap; row-gap: 3px; } .cp-ar #etfCard .mk-etf-sum { order: 3; flex-basis: 100%; margin-inline-start: 0; text-align: start; }
+  .cp-ar #etfCard .mk-etf-h { flex-wrap: wrap; row-gap: 8px; } .cp-ar #etfCard .mk-etf-seg { margin-inline-start: auto; }
+}
 .mk-etf-seg { display: inline-grid; grid-auto-flow: column; background: var(--bg3); border: 1px solid var(--border); border-radius: 9px; padding: 2px; gap: 2px; }
 .mk-etf-seg button { all: unset; box-sizing: border-box; padding: 5px 14px; border-radius: 7px; font-size: .74rem; font-weight: 800; color: var(--fg2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mk-etf-seg button.on { background: var(--accent); color: #fff; }
@@ -498,6 +516,10 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
     <span class="msg" id="mkMsg" aria-live="polite">Loading…</span>
   </div>
 
+  <!-- ① Market Pulse: what the market is doing now — its size and flows, its mood and leverage, who leads -->
+  <div class="mk-part" id="secPulse" data-sec="pulse">
+  <h2 class="mk-part-h"><button type="button" class="mk-part-tog" id="secPulseTog" aria-expanded="true" aria-controls="secPulseBody"><span class="mk-part-t">Market Pulse</span><span class="cp-hint" data-hint="marketPulse" role="button" tabindex="0"></span><svg class="mk-part-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2>
+  <div class="mk-part-b" id="secPulseBody">
   <section class="mk-grid" aria-label="Market overview">
     <div class="mk-card" id="cardMcap">
       <div class="mk-k"><span data-ic="globe"></span>Total Market Cap<span class="cp-hint" data-hint="mcap" role="button" tabindex="0"></span></div>
@@ -583,10 +605,19 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
     </div>
   </section>
 
-  <!-- 🌈 Bitcoin Rainbow: the trend line and its nine bands (samsam-rainbow.js; hidden until GitHub has the numbers) -->
-  <section class="mk-card mk-etf mk-rb" id="rbCard" hidden aria-label="Bitcoin Rainbow"></section>
   <!-- ⚖️ BTC Funding: several venues as one rate, weighted by open interest (samsam-funding.js; hidden until GitHub has the numbers) -->
   <section class="mk-card mk-etf mk-fund" id="fundCard" hidden aria-label="BTC Funding"></section>
+  </div></div>
+
+  <!-- ② Bitcoin Valuation: where Bitcoin's own price stands against its history — the same three readings as the Exit page, without personal levels -->
+  <div class="mk-part" id="secVal" data-sec="val">
+  <h2 class="mk-part-h"><button type="button" class="mk-part-tog" id="secValTog" aria-expanded="true" aria-controls="secValBody"><span class="mk-part-t">Bitcoin Valuation</span><span class="cp-hint" data-hint="hubValuation" role="button" tabindex="0"></span><svg class="mk-part-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></h2>
+  <div class="mk-part-b" id="secValBody">
+  <!-- 🌈 Bitcoin Rainbow: the trend line and its nine bands (samsam-rainbow.js; hidden until GitHub has the numbers) -->
+  <section class="mk-card mk-etf mk-rb" id="rbCard" hidden aria-label="Bitcoin Rainbow"></section>
+  <!-- Bitcoin Pi Cycle + Bitcoin MVRV, each with its place in its own history (samsam-btcval.js; hidden until GitHub has the numbers) -->
+  <section class="mk-card mk-val" id="valCard" hidden aria-label="Bitcoin Pi Cycle and Bitcoin MVRV"></section>
+  </div></div>
 
   <section class="mk-list" aria-label="Market watchlist">
     <div class="mk-tabs" role="tablist">
@@ -632,7 +663,7 @@ html[dir="rtl"] .as-nl small:not(.as-my) { direction: ltr; text-align: right; } 
 <footer id="cpFoot"></footer>
 <div class="mk-toast" id="mkToast" role="status" aria-live="polite"></div>
 
-<script type="module" src="samsam-cloud.js?v=202611280934"></script>
+<script type="module" src="samsam-cloud.js?v=202611281227"></script>
 <script>
 const M = window.SamsamMarket, E = s => SamsamCoins.esc(s), ic = (n, o) => SamsamUI.ic(n, o);
 let mode = 'top', filter = 'all', sortKey = 'rank', sortDir = 1, query = '';
@@ -731,21 +762,22 @@ function paintAltNow() { paintAlt(alt90 || M.altSeason(topRows)); }
 let etf = null, etfA = 'btc';
 try { if (localStorage.getItem('samsam_mkt_etfa') === 'eth') etfA = 'eth'; } catch (_) {}
 const money = v => v == null ? '—' : !v ? '$0' : (v > 0 ? '+' : '−') + M.fmtBig(Math.abs(v));
+const fcls = v => !v ? '' : cls(v);   // a flow of exactly $0 has no sign and no colour (cls() alone paints 0 green)
 const etfDate = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 function paintEtf() {
   const card = document.getElementById('etfCard'), a = etf && etf[etfA];
   if (!etf || !((etf.btc && etf.btc.days.length) || (etf.eth && etf.eth.days.length))) { card.hidden = true; return; }
   card.hidden = false;
   { const d = a && a.days.length ? a.days : null, b = d ? d[d.length - 1] : null, sum = document.getElementById('etfSum');   // closed: the chosen asset's last day (BTC until ETH is picked)
-    sum.textContent = b ? etfA.toUpperCase() + ' ' + money(b[1]) : ''; sum.className = 'mk-etf-sum ' + (b ? cls(b[1]) : ''); }
+    sum.textContent = b ? etfA.toUpperCase() + ' ' + money(b[1]) : ''; sum.className = 'mk-etf-sum ' + (b ? fcls(b[1]) : ''); }
   paintEtfFold();
   document.querySelectorAll('#etfSeg button').forEach(b => { const on = b.dataset.a === etfA; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   const days = (a && a.days) || [];
   if (!days.length) { document.getElementById('etfNet').textContent = '—'; document.getElementById('etfDay').textContent = 'No data yet'; document.getElementById('etfBars').innerHTML = ''; document.getElementById('etfFunds').innerHTML = ''; document.getElementById('etfStats').innerHTML = ''; return; }
   const last = days[days.length - 1], sumN = n => days.slice(-n).reduce((s, r) => s + r[1], 0);
   document.getElementById('etfDay').textContent = etfDate(last[0]);
-  const net = document.getElementById('etfNet'); net.textContent = money(last[1]); net.className = 'mk-etf-v ' + cls(last[1]);
-  const st = (k, v, c) => `<div>${k}<b class="${c == null ? '' : cls(v)}">${c == null ? v : money(v)}</b></div>`;
+  const net = document.getElementById('etfNet'); net.textContent = money(last[1]); net.className = 'mk-etf-v ' + fcls(last[1]);
+  const st = (k, v, c) => `<div>${k}<b class="${c == null ? '' : fcls(v)}">${c == null ? v : money(v)}</b></div>`;
   document.getElementById('etfStats').innerHTML = st('Last 7 days', sumN(5), 1) + st('Last 30 days', sumN(22), 1) + st('Since launch', last[2], 1);
   // bars: the last 30 trading days, in green above the line / red below
   const bars = days.slice(-30), max = Math.max(1, ...bars.map(r => Math.abs(r[1]))), pos = Math.max(...bars.map(r => r[1]), 0), neg = Math.max(...bars.map(r => -r[1]), 0);
@@ -753,14 +785,14 @@ function paintEtf() {
   const box = document.getElementById('etfBars');
   box.innerHTML = `<span class="z" style="top:${zero}%"></span>` + bars.map((r, i) => {
     const h = Math.abs(r[1]) / (pos + neg || 1) * 100;
-    return `<span class="b" data-i="${i}" title="${etfDate(r[0])}: ${money(r[1])}"><i style="${r[1] >= 0 ? `bottom:${100 - zero}%` : `top:${zero}%`};height:${Math.max(1.5, h)}%;background:${r[1] >= 0 ? 'var(--green)' : 'var(--red)'}"></i></span>`;
+    return `<span class="b" data-i="${i}" title="${etfDate(r[0])}: ${money(r[1])}"><i style="${r[1] >= 0 ? `bottom:${100 - zero}%` : `top:${zero}%`};height:${Math.max(1.5, h)}%;background:${r[1] > 0 ? 'var(--green)' : r[1] < 0 ? 'var(--red)' : 'var(--fg2)'}"></i></span>`;
   }).join('') + '<div class="mk-etf-tip" id="etfTip" hidden></div>';
   box.setAttribute('aria-label', `${etfA.toUpperCase()} ETF daily net flows, last ${bars.length} trading days`);
   const tip = document.getElementById('etfTip');
   const show = e => {
     const b = e.target.closest && e.target.closest('.b'); if (!b) return;
     const r = bars[+b.dataset.i]; box.querySelectorAll('.b.on').forEach(x => x.classList.remove('on')); b.classList.add('on');
-    tip.innerHTML = `${etfDate(r[0])} · <b class="${cls(r[1])}">${money(r[1])}</b>`; tip.hidden = false;
+    tip.innerHTML = `${etfDate(r[0])} · <b class="${fcls(r[1])}">${money(r[1])}</b>`; tip.hidden = false;
     const bx = b.offsetLeft + b.offsetWidth / 2, w = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(box.clientWidth - w, bx - w / 2)) + 'px';
   };
   box.onpointerover = show; box.onpointerdown = show;
@@ -769,7 +801,7 @@ function paintEtf() {
   // the biggest moves among the funds that day
   const f = a.funds && a.funds.date === last[0] ? a.funds.list.slice().sort((x, y) => Math.abs(y.net) - Math.abs(x.net)).slice(0, 4) : [];
   paintAltEtf();
-  document.getElementById('etfFunds').innerHTML = f.map(x => `<div title="${x.name.replace(/"/g, '&quot;')}"><span>${x.t}</span><b class="${cls(x.net)}">${money(x.net)}</b></div>`).join('');
+  document.getElementById('etfFunds').innerHTML = f.map(x => `<div title="${x.name.replace(/"/g, '&quot;')}"><span>${x.t}</span><b class="${fcls(x.net)}">${money(x.net)}</b></div>`).join('');
 }
 // Closed card: the chosen asset's last 14 trading days as small bars (one scale for the 14, the zero line where the
 // ins and outs meet, exactly as the chart inside draws its 30), and under them the same "Last 7 days" sum as the open
@@ -787,7 +819,7 @@ function paintEtfFold() {
   }).join('');
   box.setAttribute('aria-label', `${etfA.toUpperCase()} ETF daily net flows, last ${bars.length} trading days: ${ins} in, ${outs} out`);
   const w = days.slice(-5).reduce((s, r) => s + r[1], 0);
-  document.getElementById('etfMl7').innerHTML = `Last 7 days<b class="${cls(w)}">${money(w)}</b>`;
+  document.getElementById('etfMl7').innerHTML = `Last 7 days<b class="${fcls(w)}">${money(w)}</b>`;
   document.getElementById('etfMlN').textContent = `${bars.length} trading days`;
 }
 // Altcoin Season card: money into ETH vs BTC ETFs over the last 7 days (5 trading days) — ETH taking more is often an early sign
@@ -815,8 +847,25 @@ document.getElementById('etfTog').addEventListener('click', () => {
 });
 document.getElementById('etfSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; etfA = b.dataset.a; try { localStorage.setItem('samsam_mkt_etfa', etfA); } catch (_) {} paintEtf(); });
 function loadEtf(force) { if (M.etf) M.etf(force).then(j => { etf = j; paintEtf(); }, () => {}); }
+// ── the two headed sections: a tap on the heading folds the section (remembered on this device) ──
+function setSec(sec, on) {
+  sec.querySelector('.mk-part-b').hidden = !on; sec.classList.toggle('shut', !on); sec.querySelector('.mk-part-tog').setAttribute('aria-expanded', String(on));
+  if (on) window.dispatchEvent(new Event('resize'));   // a chart drawn while its section was folded had no width
+}
+window.mkOpenSec = el => { const sec = el && el.closest && el.closest('.mk-part'); if (sec && sec.querySelector('.mk-part-b').hidden) setSec(sec, true); };   // (market.html#rainbow: the bot's button opens a card inside a folded section)
+document.querySelectorAll('.mk-part').forEach(sec => {
+  const k = 'samsam_mkt_sec_' + sec.dataset.sec; let on = true; try { on = localStorage.getItem(k) !== '0'; } catch (_) {}
+  setSec(sec, on);
+  sec.querySelector('.mk-part-tog').addEventListener('click', () => { const open = sec.querySelector('.mk-part-b').hidden; setSec(sec, open); try { localStorage.setItem(k, open ? '1' : '0'); } catch (_) {} });
+});
+{ // Bitcoin Valuation has nothing of its own to show until one of its cards has its numbers: no heading over nothing
+  const sec = document.getElementById('secVal'), cards = [...sec.querySelectorAll('.mk-part-b > section')], sync = () => { const h = cards.every(c => c.hidden); if (sec.hidden !== h) sec.hidden = h; };   // (only on a change: writing the same value again is itself a mutation — an endless loop)
+  new MutationObserver(sync).observe(sec, { attributes: true, attributeFilter: ['hidden'], subtree: true }); sync();
+}
 // 🌈 the Bitcoin Rainbow card draws itself (samsam-rainbow.js)
 if (window.SamsamRainbow) SamsamRainbow.mount(document.getElementById('rbCard'));
+// …and so does the Bitcoin Pi Cycle + Bitcoin MVRV card under it (samsam-btcval.js)
+if (window.SamsamBtcVal) SamsamBtcVal.mount(document.getElementById('valCard'));
 // ⚖️ and so does the BTC Funding card (samsam-funding.js)
 if (window.SamsamFunding) SamsamFunding.mount(document.getElementById('fundCard'));
 

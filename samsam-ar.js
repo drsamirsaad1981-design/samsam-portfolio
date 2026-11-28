@@ -461,7 +461,7 @@
     'The line was last fitted on': 'آخر حساب للخط كان في', 'Loading the chart…': 'جارٍ تحميل الرسم…', 'The chart is not ready yet.': 'الرسم غير جاهز بعد.', 'Could not load the chart — try again later.': 'تعذّر تحميل الرسم — حاول لاحقاً.',
     'One trend line through every daily close since 18 Aug 2010 (blockchain.com until 2017, Binance after), and nine equal bands between the deepest and the highest distance from it. The line is fitted again every week. It describes the past — it is not a forecast.': 'خط اتجاه واحد يمر بكل إغلاق يومي منذ 18 أغسطس 2010 (blockchain.com حتى 2017، ثم Binance)، وتسعة نطاقات متساوية بين أعمق نزول تحته وأعلى صعود فوقه. يُعاد حساب الخط كل أسبوع. هو وصف للماضي، وليس توقعاً.',
     // the Exit page's two groups, and the Pi Cycle
-    'Market Structure': 'هيكل السوق', 'Bitcoin Valuation': 'تقييم البيتكوين', 'Pi Cycle': 'مؤشر Pi Cycle', 'Bitcoin Pi Cycle': 'مؤشر Pi Cycle للبيتكوين', 'Bitcoin MVRV': 'مؤشر MVRV للبيتكوين', 'Near': 'قريب',
+    'Market Structure': 'هيكل السوق', 'Bitcoin Valuation': 'تقييم البيتكوين', 'Market Pulse': 'نبض السوق', 'Pi Cycle': 'مؤشر Pi Cycle', 'Bitcoin Pi Cycle': 'مؤشر Pi Cycle للبيتكوين', 'Bitcoin MVRV': 'مؤشر MVRV للبيتكوين', 'Near': 'قريب',
     'Bitcoin Pi Cycle at or over (%)': 'مؤشر Pi Cycle للبيتكوين عند أو فوق (%)', 'Bitcoin’s 111-day average as a percent of twice its 350-day average; 100 is the cross.': 'متوسط سعر البيتكوين لـ 111 يوماً كنسبة من ضعف متوسطه لـ 350 يوماً؛ و100 هي التقاطع.',
     'Each cycle’s highest:': 'أعلى قراءة في كل دورة:', 'Its last cross:': 'آخر تقاطع:',
     'MVRV': 'مؤشر MVRV', 'Bitcoin MVRV at or over (1–10)': 'مؤشر MVRV للبيتكوين عند أو فوق (1–10)', 'Source: Coin Metrics': 'المصدر: Coin Metrics',
@@ -747,6 +747,9 @@
   // ════════ Fixes from the real portfolio (17 Nov, afternoon) ════════
   R(new RegExp('^' + MRX + ' (\\d{4})$'), function (_, m, y) { return MON[m] + ' ' + y; });
   R(/^(\d+) days ago$/, function (_, d) { return 'منذ ' + pl(d, 'يوم', 'يومين', 'أيام', 'يوم'); });
+  // a trading day in the ETF card: "Fri, Nov 27" → "الجمعة 27 نوفمبر" (the card's own date and the bar's tip)
+  var WDAY = { Mon: 'الاثنين', Tue: 'الثلاثاء', Wed: 'الأربعاء', Thu: 'الخميس', Fri: 'الجمعة', Sat: 'السبت', Sun: 'الأحد' };
+  R(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{1,2})$/, function (_, w, m, d) { return WDAY[w] + ' ' + n(d) + ' ' + MON[m]; });
   R(/^(\d+) trading days$/, function (_, d) { return n(d) + (+d >= 3 && +d <= 10 ? ' أيام تداول' : ' يوم تداول'); });   // under the ETF card's small bars
   R(/^Stablecoins hidden \((.+)\)$/, function (_, l) { return 'العملات المستقرة مخفية (' + n(l) + ')'; });
   R(/^of (\d+)$/, 'من $1');

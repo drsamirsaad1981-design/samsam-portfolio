@@ -1,6 +1,6 @@
 // samsam-worker.js — BUILT FILE (node tools/build-worker.mjs). Paste all of it into the Cloudflare Worker: AI Analysis (/analyze) + the Telegram bot (/tg).
 // Sources: tools/ai-worker.js, tools/worker/*.mjs, tools/alerts-core.mjs, samsam-core.js. No keys or secrets in here — they live in the Worker settings.
-// sources-hash: 37d67d1fa6a443d6
+// sources-hash: e95c214a744e1ef3
 
 // tools/ai-worker.js
 var JWKS_URL = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
@@ -872,8 +872,12 @@ function btcMarks(R, now = Date.now(), price3 = null) {
   const rb = rainbowRead(R, now, price3);
   if (!rb) return null;
   const w = R.w200 && +R.w200.ma > 0 ? { ma: +R.w200.ma, day: R.w200.day, vs: (rb.price / R.w200.ma - 1) * 100, hist: R.w200.under || null } : null;
-  const p = R.pi && +R.pi.ratio > 0 ? { ratio: +R.pi.ratio, d111: +R.pi.d111, d350x2: +R.pi.d350x2, day: R.pi.day, peaks: R.pi.peaks || [], crosses: R.pi.crosses || [] } : null;
+  const p = R.pi && +R.pi.ratio > 0 ? { ratio: +R.pi.ratio, d111: +R.pi.d111, d350x2: +R.pi.d350x2, day: R.pi.day, peaks: R.pi.peaks || [], crosses: R.pi.crosses || [], hist: histOf(R.pi.hist) } : null;
   return { day: rb.day, price: rb.price, live: rb.live, w200: w, pi: p };
+}
+function histOf(h) {
+  if (!h || !isFinite(+h.under) || !Array.isArray(h.lo) || !Array.isArray(h.hi) || !(+h.hi[0] > +h.lo[0])) return null;
+  return { from: h.from, year: +String(h.from || "").slice(0, 4) || null, days: +h.days || null, under: Math.min(100, Math.max(0, +h.under)), lo: +h.lo[0], hi: +h.hi[0], loDay: h.lo[1] || null, hiDay: h.hi[1] || null };
 }
 var PI_EXIT = 100;
 var MVRV_EXIT = 3;
@@ -895,7 +899,8 @@ function mvrvRead(M, now = Date.now()) {
     over3: M.over3 || null,
     under1: M.under1 || null,
     src: M.src || "Coin Metrics",
-    via: M.via || null
+    via: M.via || null,
+    hist: histOf(M.hist)
   };
 }
 function dxyNow(D, now = Date.now()) {

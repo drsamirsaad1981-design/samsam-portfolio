@@ -13,6 +13,10 @@
 //   E. Bitcoin AFTER a crowded funding reading                — the same archive beside the perpetual's own 8-hour candles:
 //      what the price did in the next 24 hours and 7 days after each state of the app's wording (fundingRead), against
 //      every payment — so the ⓘ can say what was measured, as the dollar's does, or say nothing
+//   F. Stablecoin supply (DefiLlama's free API)                — before a "Stablecoin Supply" card is built: does it answer
+//      from GitHub, how fresh is it, what is inside the total (which pegs, which kinds of token), the count of coins
+//      against their dollar value (a de-peg must not read as money leaving), the biggest coins and their month, the
+//      daily history, a second source for the total — and whether a change in supply said anything about Bitcoin
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 
@@ -330,6 +334,75 @@ const ARCH = [];   // BTC's payments from the archive: [time, % per 8 h] — sec
       say(`### Every episode of "${NAME[k]}" (${Ep.length})`, '', '| Started | Rate at the first payment | 24 h later | 7 days later | Deepest fall inside 7 days | Highest rise inside 7 days |', '|---|---|---|---|---|---|', ...Ep.slice(-40).map(x => `| ${d(x.t)} | ${pc(x.r, 4)} | ${pc(x.d1)} | ${pc(x.d7)} | ${pc(x.fall)} | ${pc(x.rise)} |`), Ep.length > 40 ? `(the last 40 of ${Ep.length})` : '', ''); }
     say('- Read with care: payments next to each other overlap almost wholly (the same 7 days counted again), so the "every payment" rows look far surer than they are — the episode rows are the honest count. And most "crowded longs" readings are from 2020–2021, one bull market.');
   }
+}
+
+// ═══ F. Stablecoin supply (DefiLlama) ══════════════════════════════════════════════════════════════════════════════════
+// The card would show: the total now, the daily change of the last 30 days, the net change of 7 and 30 days, and the
+// biggest coins. Questions for this run, in order: (1) who answers and how fresh; (2) what the "total" is made of;
+// (3) units against dollars; (4) the history's shape; (5) a second source; (6) the relation to Bitcoin.
+{ say('', '## F. Stablecoin supply (DefiLlama)', '');
+  const LL = 'https://stablecoins.llama.fi', B = v => v == null || !isFinite(v) ? '—' : (v < 0 ? '−' : '') + '$' + (Math.abs(v) >= 1e9 ? (Math.abs(v) / 1e9).toFixed(2) + 'B' : (Math.abs(v) / 1e6).toFixed(1) + 'M');
+  const sumPeg = o => o && typeof o === 'object' ? Object.values(o).reduce((a, v) => a + (+v || 0), 0) : 0;
+  const list = await get(`${LL}/stablecoins?includePrices=true`), all = await get(`${LL}/stablecoincharts/all`), usdOnly = await get(`${LL}/stablecoincharts/all?stablecoin=1`);
+  say('| Call | Answered from GitHub | Time | What came |', '|---|---|---|---|',
+    `| /stablecoins?includePrices=true | ${why(list)} | ${list.ms} ms | ${list.ok && list.j && Array.isArray(list.j.peggedAssets) ? list.j.peggedAssets.length + ' assets' : '—'} |`,
+    `| /stablecoincharts/all | ${why(all)} | ${all.ms} ms | ${all.ok && Array.isArray(all.j) ? all.j.length + ' days' : '—'} |`,
+    `| /stablecoincharts/all?stablecoin=1 (one coin's own history) | ${why(usdOnly)} | ${usdOnly.ms} ms | ${usdOnly.ok && Array.isArray(usdOnly.j) ? usdOnly.j.length + ' days' : '—'} |`);
+  OUT.stables = { list: list.ok, chart: all.ok };
+  const A = list.ok && list.j && Array.isArray(list.j.peggedAssets) ? list.j.peggedAssets : [];
+  if (A.length) {
+    // (2) what the total is made of: by peg and by mechanism — units in circulation, and the same at the price DefiLlama gives
+    const rows = A.map(x => { const peg = x.pegType || '?', circ = sumPeg(x.circulating), prev = { d: sumPeg(x.circulatingPrevDay), w: sumPeg(x.circulatingPrevWeek), m: sumPeg(x.circulatingPrevMonth) }, price = +x.price > 0 ? +x.price : null;
+      return { sym: x.symbol, name: x.name, peg, mech: x.pegMechanism || '?', circ, prev, price, id: x.id }; }).filter(x => x.circ > 0);
+    const by = (k) => { const m = new Map(); for (const r of rows) { const o = m.get(r[k]) || { n: 0, circ: 0 }; o.n++; o.circ += r.circ; m.set(r[k], o); } return [...m.entries()].sort((a, b) => b[1].circ - a[1].circ); };
+    const usd = rows.filter(r => r.peg === 'peggedUSD'), tot = usd.reduce((a, r) => a + r.circ, 0);
+    say('', `${rows.length} assets with a supply. **By peg** (units in circulation — for a dollar peg a unit is a dollar):`, '', '| Peg | Assets | In circulation (its own units) |', '|---|---|---|', ...by('peg').slice(0, 10).map(([k, o]) => `| ${k} | ${o.n} | ${o.circ >= 1e9 ? (o.circ / 1e9).toFixed(2) + 'B' : (o.circ / 1e6).toFixed(1) + 'M'} |`));
+    say('', '**Dollar-pegged only, by how the peg is kept:**', '', '| Mechanism | Assets | In circulation | Share |', '|---|---|---|---|', ...(() => { const m = new Map(); for (const r of usd) { const o = m.get(r.mech) || { n: 0, circ: 0 }; o.n++; o.circ += r.circ; m.set(r.mech, o); } return [...m.entries()].sort((a, b) => b[1].circ - a[1].circ).map(([k, o]) => `| ${k} | ${o.n} | ${B(o.circ)} | ${f2(o.circ / tot * 100, 1)}% |`); })());
+    // the biggest: units now, a day / a week / a month ago, the price DefiLlama gives (a de-peg shows here, not in the units)
+    const top = [...usd].sort((a, b) => b.circ - a.circ);
+    say('', `**The biggest dollar-pegged coins** (total of all ${usd.length}: ${B(tot)}):`, '', '| Coin | Name | In circulation | Share | 1 day | 7 days | 30 days | 30 days % | Price |', '|---|---|---|---|---|---|---|---|---|',
+      ...top.slice(0, 15).map(r => `| ${r.sym} | ${r.name} | ${B(r.circ)} | ${f2(r.circ / tot * 100, 1)}% | ${B(r.circ - r.prev.d)} | ${B(r.circ - r.prev.w)} | ${B(r.circ - r.prev.m)} | ${r.prev.m > 0 ? pc((r.circ / r.prev.m - 1) * 100) : '—'} | ${r.price ? '$' + r.price.toFixed(4) : '—'} |`));
+    const off = usd.filter(r => r.price && Math.abs(r.price - 1) > 0.02 && r.circ > 5e7).sort((a, b) => b.circ - a.circ);
+    say('', `- Top 4 share: ${f2(top.slice(0, 4).reduce((a, r) => a + r.circ, 0) / tot * 100, 1)}% · top 10: ${f2(top.slice(0, 10).reduce((a, r) => a + r.circ, 0) / tot * 100, 1)}%.`,
+      `- Dollar-pegged coins over $50M whose price is more than 2% away from $1 (their units stay in the total): ${off.length ? off.slice(0, 12).map(r => `${r.sym} $${r.price.toFixed(3)} (${B(r.circ)})`).join(' · ') : 'none'}.`,
+      `- Tokens in the list that the app does not call a stablecoin by name (tokenized treasuries, yield tokens — a look at what is inside): ${usd.filter(r => /treasur|t-bill|yield|fund|heloc|buidl|ondo/i.test(r.name + ' ' + r.sym)).sort((a, b) => b.circ - a.circ).slice(0, 12).map(r => `${r.sym} ${B(r.circ)}`).join(' · ') || 'none found by name'}.`);
+    OUT.stables.n = rows.length; OUT.stables.usd = { n: usd.length, total: tot, top: top.slice(0, 8).map(r => [r.sym, r.circ, r.prev.m]) };
+  }
+  // (3)(4) the daily history: units against dollars, freshness, gaps, the last 30 days' daily change
+  const H = all.ok && Array.isArray(all.j) ? all.j.map(x => ({ d: Math.floor(+x.date / 86400), u: +(x.totalCirculating && x.totalCirculating.peggedUSD) || 0, usd: +(x.totalCirculatingUSD && x.totalCirculatingUSD.peggedUSD) || 0, allU: sumPeg(x.totalCirculating), allUsd: sumPeg(x.totalCirculatingUSD) })).filter(x => x.d > 0 && x.u > 0).sort((a, b) => a.d - b.d) : [];
+  if (H.length > 400) { const last = H[H.length - 1], gaps = H.filter((x, i) => i && x.d - H[i - 1].d !== 1).length, at = n => H[H.length - 1 - n];
+    say('', `**History**: ${H.length} days, ${iso(H[0].d)} → ${iso(last.d)} (${today - last.d} day(s) behind today; the run is at ${new Date(NOW).toISOString().slice(11, 16)} UTC) · ${gaps} gap(s) between days.`, '',
+      '| | Dollar-pegged: units | Dollar-pegged: at market price | Gap | Every peg: at market price |', '|---|---|---|---|---|',
+      `| Now | ${B(last.u)} | ${B(last.usd)} | ${pc((last.usd / last.u - 1) * 100, 3)} | ${B(last.allUsd)} |`,
+      ...[[7, '7 days ago'], [30, '30 days ago'], [365, 'A year ago']].map(([n, w]) => at(n) ? `| ${w} | ${B(at(n).u)} | ${B(at(n).usd)} | ${pc((at(n).usd / at(n).u - 1) * 100, 3)} | ${B(at(n).allUsd)} |` : `| ${w} | — | | | |`));
+    const dU = n => last.u - at(n).u, dD = n => last.usd - at(n).usd;
+    say('', '| Net change | In units | At market price |', '|---|---|---|', `| 1 day | ${B(dU(1))} | ${B(dD(1))} |`, `| 7 days | ${B(dU(7))} (${pc(dU(7) / at(7).u * 100)}) | ${B(dD(7))} |`, `| 30 days | ${B(dU(30))} (${pc(dU(30) / at(30).u * 100)}) | ${B(dD(30))} |`, `| 365 days | ${B(dU(365))} (${pc(dU(365) / at(365).u * 100)}) | ${B(dD(365))} |`);
+    const day = H.slice(-31).map((x, i, a) => i ? [x.d, x.u - a[i - 1].u, x.usd - a[i - 1].usd] : null).filter(Boolean);
+    say('', '**The last 30 daily changes** (what the small bars would draw), in units and at market price:', '', '| Day | Units | At market price |', '|---|---|---|', ...day.map(x => `| ${iso(x[0])} | ${B(x[1])} | ${B(x[2])} |`));
+    { const v = day.map(x => x[1]), a = v.map(Math.abs).sort((x, y) => x - y); say('', `- Of these 30: ${v.filter(x => x > 0).length} up, ${v.filter(x => x < 0).length} down, ${v.filter(x => x === 0).length} flat; the median day moved ${B(median(a))}, the biggest ${B(a[a.length - 1])} (${f2(a[a.length - 1] / (median(a) || 1), 1)}× the median — one bar can flatten the rest).`); }
+    // the days units and dollars disagreed most: a de-peg read as money leaving
+    const dis = H.map((x, i) => i ? { d: x.d, du: x.u - H[i - 1].u, dd: x.usd - H[i - 1].usd } : null).filter(Boolean).map(x => ({ ...x, gap: x.dd - x.du })).sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap)).slice(0, 8);
+    say('', '**The days the two disagreed most** (the change at market price minus the change in units — a price move, not coins made or burned):', '', '| Day | Units | At market price | Difference |', '|---|---|---|---|', ...dis.map(x => `| ${iso(x.d)} | ${B(x.du)} | ${B(x.dd)} | ${B(x.gap)} |`));
+    OUT.stables.hist = { days: H.length, last: iso(last.d), behind: today - last.d, gaps, u: last.u, usd: last.usd, d7: dU(7), d30: dU(30) };
+    // (5) a second source for the total: CoinGecko's "stablecoins" category
+    const cg = await get('https://api.coingecko.com/api/v3/coins/categories'), cat = cg.ok && Array.isArray(cg.j) ? cg.j.find(x => x.id === 'stablecoins') : null;
+    say('', `- **A second source**: CoinGecko's "stablecoins" category ${cat ? 'says ' + B(+cat.market_cap) + ' (market value, every peg) against DefiLlama\'s ' + B(last.allUsd) + ' for every peg at market price — ' + pc((+cat.market_cap / last.allUsd - 1) * 100) : 'did not answer (' + why(cg) + ')'}.`);
+    // (6) what a change in supply said about Bitcoin: the 30-day change in units (%), beside Bitcoin's change over the SAME
+    // 30 days and over the NEXT 30 — monthly steps that do not overlap, since 2019
+    const btc = await (async () => { for (const base of ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com']) { const r = await get(`${base}/v8/finance/chart/BTC-USD?range=10y&interval=1d`), res = r.ok && r.j.chart && r.j.chart.result && r.j.chart.result[0];
+      if (res && res.timestamp) return new Map(res.timestamp.map((t, i) => [Math.floor(t / 86400), +res.indicators.quote[0].close[i]]).filter(x => x[1] > 0)); } return new Map(); })();
+    const HM = new Map(H.map(x => [x.d, x.u])), px = d => { for (let k = 0; k < 4; k++) if (btc.get(d - k) > 0) return btc.get(d - k); return null; };
+    if (btc.size < 1000) say('', '- Bitcoin\'s daily prices did not come (Yahoo): the relation is not measured in this run.');
+    else { const P = []; for (let d = dn('2019-01-01') + 30; d <= last.d - 30; d += 30) { const s0 = HM.get(d - 30), s1 = HM.get(d), b0 = px(d - 30), b1 = px(d), b2 = px(d + 30); if (s0 > 0 && s1 > 0 && b0 && b1 && b2) P.push({ d, ds: (s1 / s0 - 1) * 100, same: (b1 / b0 - 1) * 100, next: (b2 / b1 - 1) * 100 }); }
+      const corr = (xs, ys) => { const mx = mean(xs), my = mean(ys), c = mean(xs.map((v, i) => (v - mx) * (ys[i] - my))), sx = Math.sqrt(mean(xs.map(v => (v - mx) ** 2))), sy = Math.sqrt(mean(ys.map(v => (v - my) ** 2))); return sx && sy ? c / (sx * sy) : null; };
+      const grp = (name, Q) => Q.length < 5 ? `| ${name} | ${Q.length} — too few | | | | |` : `| ${name} | ${Q.length} | ${pc(median(Q.map(x => x.same)))} | ${f2(Q.filter(x => x.same > 0).length / Q.length * 100, 0)}% | ${pc(median(Q.map(x => x.next)))} | ${f2(Q.filter(x => x.next > 0).length / Q.length * 100, 0)}% |`;
+      say('', `### Supply and Bitcoin — ${P.length} months that do not overlap, ${iso(P[0].d - 30)} → ${iso(P[P.length - 1].d + 30)}`, '',
+        `- Correlation of the month's change in supply with Bitcoin's change **in the same month**: ${f2(corr(P.map(x => x.ds), P.map(x => x.same)))}; with Bitcoin's change **in the next month**: ${f2(corr(P.map(x => x.ds), P.map(x => x.next)))}.`, '',
+        '| Supply over the month | Months | Bitcoin the same month: median | …it rose in | Bitcoin the next month: median | …it rose in |', '|---|---|---|---|---|---|',
+        grp('**Every month**', P), grp('Supply grew 2%+', P.filter(x => x.ds >= 2)), grp('Supply grew 0 … 2%', P.filter(x => x.ds >= 0 && x.ds < 2)), grp('Supply shrank', P.filter(x => x.ds < 0)),
+        '', '- Read with care: a few dozen months, most of the shrinking ones in 2022–2023 (one bear market), and supply follows price as much as it leads it.');
+      OUT.stables.btc = { months: P.length, same: corr(P.map(x => x.ds), P.map(x => x.same)), next: corr(P.map(x => x.ds), P.map(x => x.next)) }; }
+  } else say('', `**No usable history** (${H.length} days).`);
 }
 
 say('', '---', '', 'What this run does not say: whether these numbers are worth showing — only whether they can be had, how fresh, and how far two sources agree.');

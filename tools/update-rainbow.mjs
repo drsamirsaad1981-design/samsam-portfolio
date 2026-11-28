@@ -26,7 +26,8 @@ const DAY = 864e5, FROM = C.rainbowDay(C.RAINBOW_FROM), CUT = C.rainbowDay('2017
 const REF = { a: -16.1839, b: 5.5943, n: 5930, to: '2026-11-11' };                           // the published fit (the lab's comparison)
 const TOP_YEARS = [2011, 2013, 2017, 2021, 2025];
 const HALVINGS = ['2012-11-28', '2016-07-09', '2020-05-11', '2024-04-20'].map(C.rainbowDay);   // a cycle = from one halving to the next
-const GEN = 2;   // the file's make-up: a higher number rewrites it from the kept days at once (2: the 200-week average, the Pi Cycle)
+const GEN = 3;   // the file's make-up: a higher number rewrites it from the kept days at once (2: the 200-week average, the Pi Cycle · 3: the Pi Cycle's place in its history)
+const HIST_FROM = C.rainbowDay('2012-01-01');   // "since 2012": the Pi Cycle's and MVRV's place in their own history (the Market Hub card)
 const r6 = v => +(+v).toPrecision(6), log = (...a) => console.log(new Date().toISOString().slice(11, 19), '[rainbow]', ...a);
 const BN = process.env.BN_API || 'https://data-api.binance.vision/api/v3';
 const BC = process.env.BC_API || 'https://api.blockchain.info';
@@ -81,7 +82,10 @@ export function build(series, old, nowMs = Date.now()) {
       if (best) pk.push([yearOf(best[0]), +best[1].toFixed(1), C.rainbowIso(best[0])]);
     }
     for (let i = 1; i < pis.length; i++) if (pis[i][1] >= 100 && pis[i - 1][1] < 100) crosses.push(C.rainbowIso(pis[i][0]));
-    return { day: C.rainbowIso(end[0]), ratio: +end[1].toFixed(2), d111: r6(end[2]), d350x2: r6(end[3]), peaks: pk, crosses };
+    // where today's reading stands among every day since 2012: the share of days under it, the lowest and the highest
+    const H = pis.filter(x => x[0] >= HIST_FROM), lo = H.reduce((a, b) => b[1] < a[1] ? b : a), hi = H.reduce((a, b) => b[1] > a[1] ? b : a);
+    const hist = { from: '2012-01-01', days: H.length, under: +(H.filter(x => x[1] < end[1]).length / H.length * 100).toFixed(1), lo: [+lo[1].toFixed(1), C.rainbowIso(lo[0])], hi: [+hi[1].toFixed(1), C.rainbowIso(hi[0])] };
+    return { day: C.rainbowIso(end[0]), ratio: +end[1].toFixed(2), d111: r6(end[2]), d350x2: r6(end[3]), peaks: pk, crosses, hist };
   })();
   const weekly = rows.filter(([d]) => (d + 4) % 7 === 0 || d === last).map(([d, p]) => [d, r6(p)]);
   return { v: 1, gen: GEN, updated: new Date(nowMs).toISOString(), src: 'blockchain.com daily price until 2017-08-16, Binance BTCUSDT daily close (UTC) after',

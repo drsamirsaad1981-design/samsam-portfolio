@@ -18,7 +18,7 @@
   var COL = ['#8f57ff', '#0464cd', '#1bc6de', '#00aa73', '#96d208', '#ffe678', '#ff9027', '#ff1522', '#b13a71'];
   var INK = ['#fff', '#fff', '#06121f', '#06121f', '#06121f', '#06121f', '#06121f', '#fff', '#fff'];   // the number on each band
   var DAY = 864e5, OPEN_KEY = 'samsam_mkt_rb_open';
-  var el = null, small = null, full = null, fullAsked = false, tipOn = null, mvPart = null;
+  var el = null, small = null, full = null, fullAsked = false, tipOn = null;
   var E = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var C = function () { return window.Samsam && window.Samsam.core && window.Samsam.core.rainbowRead ? window.Samsam.core : null; };
   var M = function () { return window.SamsamMarket; };
@@ -95,7 +95,7 @@
       '<div class="rb-stats">' + stat('Last daily close', E(usd(r.close)), E(day(r.day))) + stat('Trend line', E(usd(r.line)), E(vsTxt(r.vs))) +
         stat('This band', '<span class="rb-range">' + E(usd(r.lo)) + ' – ' + E(usd(r.hi)) + '</span>', share[r.band - 1] != null ? (+share[r.band - 1]).toFixed(1) + '% of days since 2010' : '') +
         stat('In this band since', r.since ? E(day(r.since)) : '—', 'counted after two daily closes') + '</div>' +
-      w200Html() + mvrvHtml() +
+      w200Html() +
       '<div class="rb-chart" id="rbChart">' + (full ? '' : '<div class="rb-wait">Loading the chart…</div>') + '</div>' +
       '<table class="rb-table" id="rbTable"><thead><tr><th>Band</th><th>Name</th><th class="r">Range today</th><th class="r">Days since 2010</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       (facts.length ? '<div class="rb-facts" id="rbFacts">' + facts.join('<br>') + '</div>' : '') +
@@ -111,17 +111,7 @@
     return '<div class="rb-w200" id="rbW200"><i class="rb-dash"></i><span>200-week average:</span> <b class="rb-range">' + E(usd(w.ma)) + '</b><span class="cp-hint" data-hint="w200" role="button" tabindex="0"></span> · <span>' + (v < 1 ? 'Bitcoin’s price is now at it' : 'Bitcoin’s price is now ~' + v + '% ' + (w.vs < 0 ? 'below' : 'above') + ' it') + '</span>' +   // (the price here is the last daily close)
       (h && h.days != null ? '<small><span>Daily closes under it: ' + h.days.toLocaleString('en-US') + ' (' + h.pct + '% of the days)</span>' + (h.last ? ' · <span>the last on</span> <span>' + E(day(h.last)) + '</span>' : '') + ' · <span>a reference, not a floor</span></small>' : '') + '</div>';
   }
-  // MVRV (Bitcoin's market value ÷ its realized value — samsam-core.js → mvrvRead on the snapshot's part): the ratio, the
-  // market's average cost it implies and the close against it, each cycle's highest — and whose number it is (Coin Metrics'
-  // free data asks for its name). A reference, not a floor.
-  function mvrvHtml() {
-    var c = C(), m = c && c.mvrvRead ? c.mvrvRead(mvPart, Date.now()) : null; if (!m) return '';
-    var vs = (m.v - 1) * 100, v = Math.round(Math.abs(vs)), pk = (m.peaks || []).filter(function (x) { return x && x[0] >= 2012; });
-    return '<div class="rb-w200 rb-mvrv" id="rbMvrv"><span data-no-tr>MVRV</span> <b class="rb-range">' + m.v.toFixed(2) + '</b><span class="cp-hint" data-hint="mvrv" role="button" tabindex="0"></span>' +
-      (m.realized ? ' · <span>Bitcoin’s realized market cost:</span> <b class="rb-range">' + E(usd(m.realized)) + '</b> · <span>' + (v < 1 ? 'Bitcoin’s price is now at average cost' : 'Bitcoin’s price is now ~' + v + '% ' + (vs < 0 ? 'below' : 'above') + ' average cost') + '</span>' : '') +
-      '<small>' + (pk.length ? '<span>Each cycle’s highest:</span> ' + pk.map(function (x) { return '<bdi dir="ltr">' + x[0] + ': ' + (+x[1]).toFixed(2) + '</bdi>'; }).join(' · ') + ' · ' : '') +
-      '<span>a reference, not a floor</span> · <span class="rb-src">Source: Coin Metrics</span>' + (m.via ? ' <span>(today’s value: ' + E(m.via) + ')</span>' : '') + '</small></div>';
-  }
+  // (MVRV has its own cell in the card under this one — samsam-btcval.js — so it is not said twice.)
   // the chart: price on a log scale against time, the nine bands as ribbons, the weekly closes as one line
   var G = { w: 720, h: 330, l: 46, r: 22, t: 8, b: 24 };
   function chart(r) {
@@ -189,11 +179,10 @@
   function note(t) { var w = el && el.querySelector('.rb-wait'); if (w) w.textContent = t; }
   function load() {
     if (!M() || !M().rainbow) return;
-    if (M().mvrv) M().mvrv().then(function (p) { mvPart = p; if (small) paint(); }, function () {});
     M().rainbow().then(function (f) { small = f; var go = function (n) { if (C() || n > 60) paint(); else setTimeout(function () { go(n + 1); }, 150); }; go(0); });   // (the maths arrives with samsam-cloud.js)
   }
   // market.html#rainbow (the bot's alert button): open the card and bring it into view
-  function fromHash() { if (/^#rainbow\b/.test(location.hash || '') && el) { setOpen(true); setTimeout(function () { if (!el.hidden) el.scrollIntoView({ block: 'start' }); }, 700); } }   // (after the cards above it have their height)
+  function fromHash() { if (/^#rainbow\b/.test(location.hash || '') && el) { if (window.mkOpenSec) window.mkOpenSec(el); setOpen(true); setTimeout(function () { if (!el.hidden) el.scrollIntoView({ block: 'start' }); }, 700); } }   // (after the cards above it have their height)
 
   window.SamsamRainbow = {
     COLORS: COL,

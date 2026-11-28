@@ -56,6 +56,7 @@ export const MVRV_FROM = '2011-01-01';   // before 2011 the ratio is not a readi
 const HALVINGS = ['2012-11-28', '2016-07-09', '2020-05-11', '2024-04-20'].map(dn);
 // days: Map(day → ratio) · the small part every reader uses. A cycle runs from one halving to the next; its highest and
 // lowest are named by the year they happened (like the Pi Cycle's).
+export const HIST_FROM = '2012-01-01';   // "since 2012": the same start as the Pi Cycle's (tools/update-rainbow.mjs)
 export function mvrvSummary(days, { price = null, via = null, nowMs = Date.now() } = {}) {
   const ds = [...days.keys()].filter(d => d >= dn(MVRV_FROM) && days.get(d) > 0).sort((a, b) => a - b); if (ds.length < 30) return null;
   const last = ds[ds.length - 1], now = days.get(last), back = n => { for (let d = last - n; d > last - n - 4; d--) if (days.get(d) > 0) return r4(days.get(d)); return null; };
@@ -66,7 +67,10 @@ export function mvrvSummary(days, { price = null, via = null, nowMs = Date.now()
     peaks.push([+iso(hi).slice(0, 4), r4(days.get(hi)), iso(hi)]); lows.push([+iso(lo).slice(0, 4), r4(days.get(lo)), iso(lo)]);
   }
   const lastAt = f => { for (let i = ds.length - 1; i >= 0; i--) if (f(days.get(ds[i]))) return iso(ds[i]); return null; };
-  return { v: 1, day: iso(last), now: r4(now), price: price > 0 ? Math.round(price) : null, realized: price > 0 ? Math.round(price / now) : null, wk: back(7), mo: back(30),
+  // where today's ratio stands among every day since 2012: the share of days under it, the lowest and the highest
+  const hs = ds.filter(d => d >= dn(HIST_FROM)), hlo = hs.length ? hs.reduce((x, y) => days.get(y) < days.get(x) ? y : x) : null, hhi = hs.length ? hs.reduce((x, y) => days.get(y) > days.get(x) ? y : x) : null;
+  const hist = hs.length > 365 ? { from: HIST_FROM, days: hs.length, under: +(hs.filter(d => days.get(d) < now).length / hs.length * 100).toFixed(1), lo: [r4(days.get(hlo)), iso(hlo)], hi: [r4(days.get(hhi)), iso(hhi)] } : null;
+  return { v: 1, ...(hist ? { hist } : {}), day: iso(last), now: r4(now), price: price > 0 ? Math.round(price) : null, realized: price > 0 ? Math.round(price / now) : null, wk: back(7), mo: back(30),
     peaks, lows, over35: lastAt(v => v >= 3.5), over3: lastAt(v => v >= 3), under1: lastAt(v => v < 1), src: 'Coin Metrics', ...(via ? { via } : {}), at: new Date(nowMs).toISOString() };
 }
 async function coinMetrics(fromDay) {   // { days: Map(day → ratio), px: Map(day → price) } | null
@@ -98,7 +102,7 @@ export async function mvrvPart(OUT, old, nowMs) {
   if (cm < want - 1) { const alt = await blockchainMvrv(), late = [...alt.keys()].filter(d => d > cm && d <= want).sort((a, b) => a - b);
     if (late.length) { for (const d of late) days.set(d, alt.get(d)); via = 'blockchain.com'; price = null; log('mvrv: Coin Metrics silent since', iso(cm), '→ blockchain.com for', iso(late[late.length - 1])); } }
   if (via) { const bd = readJson(path.join(OUT, 'btcday.json')), last = Math.max(...days.keys()); if (bd && Array.isArray(bd.p) && bd.start) { const v = bd.p[last - dn(bd.start)]; if (v > 0) price = v; } }
-  if (!changed && !via && old && old.day >= iso(cm)) return old;   // nothing new (or: both silent after a stand-in day — the stand-in stays)
+  if (!changed && !via && old && old.day >= iso(cm) && old.hist) return old;   // nothing new (a part made before `hist` existed is made again)   · (or: both silent after a stand-in day — the stand-in stays)
   return mvrvSummary(days, { price, via, nowMs }) || old || null;
 }
 

@@ -902,9 +902,17 @@ export function btcPi(rows) {
 export function btcMarks(R, now = Date.now(), price = null) {
   const rb = rainbowRead(R, now, price); if (!rb) return null;
   const w = R.w200 && +R.w200.ma > 0 ? { ma: +R.w200.ma, day: R.w200.day, vs: (rb.price / R.w200.ma - 1) * 100, hist: R.w200.under || null } : null;
-  const p = R.pi && +R.pi.ratio > 0 ? { ratio: +R.pi.ratio, d111: +R.pi.d111, d350x2: +R.pi.d350x2, day: R.pi.day, peaks: R.pi.peaks || [], crosses: R.pi.crosses || [] } : null;
+  const p = R.pi && +R.pi.ratio > 0 ? { ratio: +R.pi.ratio, d111: +R.pi.d111, d350x2: +R.pi.d350x2, day: R.pi.day, peaks: R.pi.peaks || [], crosses: R.pi.crosses || [], hist: histOf(R.pi.hist) } : null;
   return { day: rb.day, price: rb.price, live: rb.live, w200: w, pi: p };
 }
+// A reading's place in its own history (the jobs write it: { from, days, under %, lo: [value, day], hi: [value, day] }):
+// → { from, year, days, under (share of the days since `from` that were lower, 0 … 100), lo, hi, loDay, hiDay } | null
+function histOf(h) {
+  if (!h || !isFinite(+h.under) || !Array.isArray(h.lo) || !Array.isArray(h.hi) || !(+h.hi[0] > +h.lo[0])) return null;
+  return { from: h.from, year: +String(h.from || '').slice(0, 4) || null, days: +h.days || null, under: Math.min(100, Math.max(0, +h.under)), lo: +h.lo[0], hi: +h.hi[0], loDay: h.lo[1] || null, hiDay: h.hi[1] || null };
+}
+// where a value sits between the lowest and the highest reading (0 … 100, for a small range bar)
+export const histPos = (v, h) => !h || !isFinite(+v) ? null : Math.min(100, Math.max(0, (+v - h.lo) / (h.hi - h.lo) * 100));
 export const PI_EXIT = 100;   // the Exit page's Pi Cycle level until you choose yours (100 = the cross itself)
 
 // ── MVRV, the dollar index, BTC funding — three readings from outside Bitcoin's own price file (tools/update-macro.mjs →
@@ -919,7 +927,7 @@ export function mvrvRead(M, now = Date.now()) {
   if (!M || !(+M.now > 0) || !M.day) return null;
   const t = Date.parse(M.day + 'T00:00:00Z'); if (!isFinite(t) || now - t > 5 * 864e5) return null;   // its last day ended over 4 days ago
   return { day: M.day, v: +M.now, realized: +M.realized > 0 ? +M.realized : null, price: +M.price > 0 ? +M.price : null, wk: M.wk ?? null, mo: M.mo ?? null,
-    peaks: M.peaks || [], lows: M.lows || [], over35: M.over35 || null, over3: M.over3 || null, under1: M.under1 || null, src: M.src || 'Coin Metrics', via: M.via || null };
+    peaks: M.peaks || [], lows: M.lows || [], over35: M.over35 || null, over3: M.over3 || null, under1: M.under1 || null, src: M.src || 'Coin Metrics', via: M.via || null, hist: histOf(M.hist) };
 }
 // The US dollar index (ICE's DXY): the price, its level in words (k — dxyRead), the day's and the week's change, where it
 // sits in its 52-week range (0 … 100).

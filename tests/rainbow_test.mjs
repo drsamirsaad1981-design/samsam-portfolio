@@ -88,9 +88,15 @@ const mk = (lastIso, tail = {}) => { const m = new Map(), last = C.rainbowDay(la
   for (let d = FROM; d <= last; d++) s.set(d, d > last - 700 && d <= last - 550 ? 5000 : d > last - 60 ? 20 : 50);
   const R = build(s, null, now), m = C.btcMarks(R, now);
   const sun = [...s].filter(([d]) => (d + 4) % 7 === 0).slice(-200), ma = sun.reduce((a, r) => a + r[1], 0) / 200;
-  check('the file carries the 200-week average of the last Sunday and the day it is of', R.gen === 2 && near(R.w200.ma, ma, 1e-5) && R.w200.day === '2026-11-22' && R.w200.weeks === 200 && /^2014-/.test(R.w200.since), R.w200);
+  check('the file carries the 200-week average of the last Sunday and the day it is of', R.gen === 3 && near(R.w200.ma, ma, 1e-5) && R.w200.day === '2026-11-22' && R.w200.weeks === 200 && /^2014-/.test(R.w200.since), R.w200);
   check('…and how often a daily close was under it: days, share, the last day, the long spells', R.w200.under.last === '2026-11-25' && R.w200.under.days >= 60 && R.w200.under.of > 4000 && near(R.w200.under.pct, +(R.w200.under.days / R.w200.under.of * 100).toFixed(1)) && R.w200.under.spans.at(-1)[1] === '2026-11-25' && R.w200.under.spans.at(-1)[2] >= 60, R.w200.under);
   check('the Pi Cycle now, each cycle\'s highest, and the day it crossed 100', near(R.pi.ratio, +C.btcPi([...s].sort((x, y) => x[0] - y[0])).at(-1)[1].toFixed(2)) && R.pi.day === '2026-11-25' && R.pi.peaks.length === 5 && R.pi.peaks.at(-1)[1] > 100 && R.pi.peaks[1][1] === 50 && R.pi.crosses.length === 1 && /^202[45]-/.test(R.pi.crosses[0]), R.pi);
+  { // the Pi Cycle's place in its own history since 2012 — against a plain count
+    const all = C.btcPi([...s].sort((x, y) => x[0] - y[0])).filter(x => x[0] >= C.rainbowDay('2012-01-01')), cur = all.at(-1)[1], h = R.pi.hist;
+    check('the Pi Cycle\'s place in its history: the share of days since 2012 under today\'s reading, the lowest and the highest', h && h.from === '2012-01-01' && h.days === all.length && near(h.under, +(all.filter(x => x[1] < cur).length / all.length * 100).toFixed(1)) && near(h.lo[0], +Math.min(...all.map(x => x[1])).toFixed(1)) && near(h.hi[0], +Math.max(...all.map(x => x[1])).toFixed(1)) && /^\d{4}-\d\d-\d\d$/.test(h.lo[1]) && h.hi[0] > h.lo[0], h);
+    const mk = C.btcMarks(R, Date.parse('2026-11-26T12:00:00Z'));
+    check('…the reader hands it on (year 2012, 0 … 100) and histPos places a value between the lowest and the highest', mk && mk.pi.hist && mk.pi.hist.year === 2012 && mk.pi.hist.under === h.under && near(C.histPos(h.lo[0], mk.pi.hist), 0) && near(C.histPos(h.hi[0], mk.pi.hist), 100) && C.histPos(1e9, mk.pi.hist) === 100 && C.histPos(5, null) === null && C.btcMarks({ ...R, pi: { ...R.pi, hist: undefined } }, Date.parse('2026-11-26T12:00:00Z')).pi.hist === null, mk && mk.pi.hist);
+  }
   check('the reader: the price against the average (a live price moves it), the Pi numbers as they are', m && near(m.w200.vs, (20 / R.w200.ma - 1) * 100, 1e-6) && m.w200.hist.days === R.w200.under.days && near(C.btcMarks(R, now, R.w200.ma * 1.1).w200.vs, 10, 1e-6) && m.pi.ratio === R.pi.ratio && m.pi.peaks.length === 5 && m.pi.crosses.length === 1);
   check('an old file, or one without these numbers, says nothing about them', C.btcMarks(R, now + 5 * DAY) === null && C.btcMarks({ ...R, w200: null, pi: null }, now).w200 === null && C.btcMarks({ ...R, w200: null, pi: null }, now).pi === null && C.btcMarks(null) === null);
 }
@@ -131,7 +137,7 @@ const mk = (lastIso, tail = {}) => { const m = new Map(), last = C.rainbowDay(la
   // a file from before the 200-week average existed (no "gen"): written again from the kept days, nothing asked for
   { const f = path.join(dir, 'm', 'rainbow.json'), o = rd('rainbow.json'); delete o.gen; delete o.w200; delete o.pi; fs.writeFileSync(f, JSON.stringify(o)); asked = [];
     const r = await main(dir, nowMs + 40 * 60e3), n = rd('rainbow.json');
-    check('an older file is rewritten from the kept days: no request, the same ruler, the new numbers there', r === 'written' && asked.length === 0 && n.gen === 2 && n.w200 && n.w200.ma > 0 && n.pi && n.pi.ratio > 0 && JSON.stringify(n.fit) === JSON.stringify(R.fit), [r, asked.length]);
+    check('an older file is rewritten from the kept days: no request, the same ruler, the new numbers there', r === 'written' && asked.length === 0 && n.gen === 3 && n.w200 && n.w200.ma > 0 && n.pi && n.pi.ratio > 0 && JSON.stringify(n.fit) === JSON.stringify(R.fit), [r, asked.length]);
     asked = []; check('…and the run after it has nothing to do', await main(dir, nowMs + 70 * 60e3) === 'same' && asked.length === 0); }
   // the next day: only the new close is asked for, the old days are not asked for again
   asked = []; nowMs += DAY; const r2 = await main(dir, nowMs), Rb = rd('rainbow.json');

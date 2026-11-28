@@ -61,6 +61,16 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
   14 trading days of the chosen BTC / ETH, green above the line / red under it: a flow is a signed amount, so the profit
   and loss tokens are right here) with "Last 7 days …" and "14 trading days" under them; the rainbow — its strip; BTC
   funding — its bar. Each gives way to the full view when its card opens (one picture of a thing at a time).
+- **Market Hub → Crypto has two headed sections that fold** (28 Nov): **Market Pulse** (نبض السوق: the four cards, ETF
+  Flows, BTC Funding — the market's size, flows, mood and leverage NOW) and **Bitcoin Valuation** (تقييم البيتكوين: the
+  rainbow with the 200-week average, then Bitcoin Pi Cycle + Bitcoin MVRV). The first is NOT called "Market Structure":
+  on the Exit page that name means exactly three conditions (BTC dominance, USDT dominance, ETH / BTC) — one name, one
+  meaning. "Bitcoin Valuation" is the same three readings in both places and says them in the same words (`VAL_LIST` in
+  the hints); personal levels stay on the Exit page.
+- **A reading's level is said as a count, never as a zone we named** (28 Nov): the Pi Cycle and MVRV cells show the value,
+  a bar from the lowest to the highest reading since 2012, "Higher than N% of days since 2012" (written by the jobs:
+  `pi.hist`, `mvrv.hist`) and this cycle's highest — no "low / high", no "cheap / expensive". MVRV is said once on the
+  page: in its cell, not in the rainbow card any more.
 - The dollar index (27 Nov, his ranges): the card is the number and its **level in words** — under 90 Weak dollar · 90–100
   Below the base of 100 · 100–105 Moderate strength · 105–110 High strength · over 110 **Rare strength** (a level, never a
   cause: not "tightening") — `dxyRead` / `DXY_WORDS`. What it does to other assets is said **only in the ⓘ and only as
@@ -90,7 +100,7 @@ Telegram bot, the Signals channel and the public welcome page. 100% non-profit.
 | Shared UI | `samsam-ui.js` (header, footer, bottom bar, AI button, CPDialog), `samsam-lang.js` + `samsam-ar.js` (Arabic), `samsam-hints.js` |
 | Market data in the app | `samsam-market.js` (snapshot first, CoinGecko live) |
 | 🌈 Bitcoin rainbow | maths + names `samsam-core.js` (`rainbowFit`, `rainbowRead`, `RAINBOW_NAMES`); the daily job `tools/update-rainbow.mjs` → `m/btcday.json` (every close since 2010) + `m/rainbow.json` (its small part is copied into `m/market.json` by `update-market.mjs` — the Worker has no outside call to spare); Market Hub card `samsam-rainbow.js`; the bot's lines and the alert `tools/alerts-core.mjs` (`rainbowLines`, `evaluate` 4b); the labs `tools/lab/rainbow.mjs` and `tools/lab/macro.mjs` (trials only: they run on GitHub, write nothing, and report in the run's summary). The same job and file carry 📏 the 200-week average and the Pi Cycle (`w200`, `pi`; `btcW200`, `btcPi`, one reader `btcMarks`); 📉 `maxDrawdown` is in the core too (Performance page) |
-| MVRV · 💵 dollar index · ⚖️ BTC funding | the job `tools/update-macro.mjs` → `m/macro.json` (+ `m/mvrv.json`, MVRV's whole history) — its three parts are copied into `m/market.json` (`mvrv`, `dxy`, `funding`) by `update-market.mjs`; readers and the funding wording in `samsam-core.js` (`mvrvRead`, `dxyNow`, `fundingNow`, `fundingRead` / `FUNDING_WORDS`); Exit row `samsam-exit.js`; Market Hub: `samsam-funding.js` (card), the MVRV row in `samsam-rainbow.js`, the dollar card in `samsam-assets.js` (Metals tab); Plan line `costNote` in `accumulation.html`; bot `macroLines` (`alerts-core.mjs`, in /market), `macroFacts` (`ai.mjs`); the lab `tools/lab/macro.mjs` |
+| MVRV · 💵 dollar index · ⚖️ BTC funding | the job `tools/update-macro.mjs` → `m/macro.json` (+ `m/mvrv.json`, MVRV's whole history) — its three parts are copied into `m/market.json` (`mvrv`, `dxy`, `funding`) by `update-market.mjs`; readers and the funding wording in `samsam-core.js` (`mvrvRead`, `dxyNow`, `fundingNow`, `fundingRead` / `FUNDING_WORDS`); Exit row `samsam-exit.js`; Market Hub: `samsam-funding.js` (card), the Bitcoin Pi Cycle + Bitcoin MVRV card `samsam-btcval.js` (`#valCard`; `histOf` / `histPos` in the core), the dollar card in `samsam-assets.js` (Metals tab); Plan line `costNote` in `accumulation.html`; bot `macroLines` (`alerts-core.mjs`, in /market), `macroFacts` (`ai.mjs`); the lab `tools/lab/macro.mjs` |
 | Taxonomy | `samsam-taxonomy.js` (classes crypto / stock / metal / cash, categories) |
 | Market snapshot (GitHub Actions → branch `prices`) | `tools/update-market.mjs`, `tools/update-prices.mjs`, `tools/update-etf.mjs` → `m/market.json`, `m/etf.json`, `p/*.json` |
 | Bot + AI (Cloudflare Worker) | `tools/worker/*.mjs` (bot, ai tools, daily jobs, data), `tools/ai-worker.js`, `tools/alerts-core.mjs` (summary + messages) |
@@ -381,6 +391,31 @@ Thirteenth round (28 Nov morning, his "نفذ" on four points for the folded ETF
   "later", which crossed the Pacific midnight when it ran between 10:10 and 11:00 Riyadh — GitHub hit it at 10:44. The
   made-up clock now starts an hour back in that hour. **Any test that adds minutes to `Date.now()` must be tried at the
   edge of its day** (the clock shim in the eleventh round's note).
+
+Fourteenth round (28 Nov midday, batch A of two — his four answers: "نبض السوق", the measured line, folding sections, the lab):
+- `market.html`: `.mk-part` wrappers (`#secPulse`, `#secVal`; an h2 whose button folds the section — `setSec`, keys
+  `samsam_mkt_sec_pulse` / `_val`, `window.mkOpenSec` for `market.html#rainbow`). The class is `.mk-part`, not `.mk-sec`:
+  that name already styles the "More on CoinGecko" line as a flex row and broke the layout. BTC Funding moved up under ETF
+  Flows; the rainbow moved down. Bitcoin Valuation hides itself while none of its cards has numbers.
+- Two lessons from building it: (1) a MutationObserver that writes `hidden` must write only on a change — writing the
+  same value is itself a mutation and the page never finished loading; (2) a logical margin on an `<svg>` follows the
+  svg's own direction (ltr), so in Arabic the chevron landed beside the ⓘ — the ⓘ carries the `margin-inline-end: auto`.
+- `samsam-btcval.js`: the two cells (stacked under 340 px). `tools/update-rainbow.mjs` (`GEN` 3) and
+  `tools/update-macro.mjs` write `hist: { from: '2012-01-01', days, under, lo, hi }`; a part made before that shows the
+  value and the cycle's highest with no bar and no line. The Worker was rebuilt (the core changed); nothing in the bot
+  reads the new fields.
+- Hints: `marketPulse`, `hubValuation`, `pi` (EN + AR). His two drafts were corrected before writing: Total Market Cap is
+  size, not liquidity; the Pi Cycle is two averages of the price (how fast it rose), not a comparison with cost.
+- ETF: a $0 flow has no colour (`fcls`; the chart's flat day is neutral too); in Arabic the day reads "الجمعة 27 نوفمبر"
+  (one rule in `samsam-ar.js`); on an Arabic phone the header keeps one line ("US spot" stays in the ⓘ and the note; the
+  closed card's amount takes the next line, like the rainbow's and the funding's).
+- The app guide's Market Hub paragraph follows (`guide-app.json`); `guide.json` (the bot's) was NOT touched.
+- **Batch B is next: a "Stablecoin Supply" card in Market Pulse** (DefiLlama's free API in the scheduled job, his plan:
+  closed — the total, 30 small daily bars, net 7 / 30 days; open — the biggest coins and their month). Agreed before
+  building: the daily change is counted in UNITS, not dollars (a de-peg must not read as money leaving); the ⓘ says
+  "usually demand for cash inside crypto", not "new money entered"; the difference from USDT dominance is said (an
+  amount against a share); the biggest coins come from the data. The lab's section F (`tools/lab/macro.mjs`) asks the
+  source first; its numbers go in the Project doc.
 
 Proposed, waiting for his "نفذ" — the Project doc "alerts-plan":
 - (A) Automatic alerts for members: the same `evaluate`, run for each member inside the Worker's round every 15 min, state

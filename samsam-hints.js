@@ -20,6 +20,8 @@
     return c ? '<i class="cph-chip" style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;background:' + esc(c) + ';box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 25%,transparent)"></i>' : '';
   }
 
+  // the three readings of Bitcoin Valuation, said once (Exit page and Market Hub)
+  var VAL_LIST = '<ul><li><b>Bitcoin Rainbow</b>: the band the price holds around its long-term trend line.</li><li><b>Bitcoin Pi Cycle</b>: Bitcoin\'s 111-day average against twice its 350-day one — how fast the price has risen.</li><li><b>Bitcoin MVRV</b>: Bitcoin\'s market value ÷ its realized value — the price against Bitcoin\'s realized market cost (source: Coin Metrics).</li></ul>';
   // ── The texts ────────────────────────────────────────────────────────────────
   // title: string · body(): HTML string (only our own text + escaped values) · actions(): [{ label, onClick }]
   var HINTS = {
@@ -153,6 +155,18 @@
       '<li><b>The band that holds</b>: a move to another band counts after two daily closes in a row in it (00:00 UTC), so one day across an edge changes nothing.</li></ul>' +
       '<p>The line is fitted again every week, so the edges move a little. The two outer bands rest on two days of 2010–2011, when the market was tiny: read them with a margin.</p>' +
       '<p class="cph-ok">It describes the past — it is not a forecast. Each cycle\'s top has stopped in a lower band than the one before.</p>'; } },
+    hubValuation: { title: 'Bitcoin Valuation', body: function () { return '<p>Where Bitcoin\'s own price stands against its history.</p>' + VAL_LIST +
+      '<p>The three look at the same thing from different sides and tend to move together. The <b>200-week average</b> is inside the rainbow card.</p>' +
+      '<p>For the Pi Cycle and MVRV the card says how many days since 2012 were lower than today — a count, not a zone we named.</p>' +
+      '<p class="cph-n">A reading of the past, not a forecast. Your own exit levels are on Plan → Exit.</p>'; } },
+    marketPulse: { title: 'Market Pulse', body: function () { return '<p>What the crypto market is doing right now.</p>' +
+      '<ul><li><b>Size and flows</b>: Total Market Cap, and ETF Flows — money into or out of the US spot ETFs.</li><li><b>Mood and leverage</b>: Fear &amp; Greed, and BTC Funding — what leveraged traders pay each other.</li><li><b>Who leads</b>: Market Dominance and Altcoin Season — Bitcoin or the altcoins.</li></ul>' +
+      '<p>These measure the market\'s activity and mood now — not whether the price is low or high over the long run. That is Bitcoin Valuation, the section under this one.</p>' +
+      '<p class="cph-n">Tap a heading to fold its section; the page remembers it on this device.</p>'; } },
+    pi: { title: 'Bitcoin Pi Cycle', body: function () { return '<p>How fast Bitcoin\'s price has risen: its 111-day average as a percent of twice its 350-day average.</p>' +
+      '<ul><li><b>100%</b> is the "cross": the short average has caught up with twice the long one.</li><li>It crossed near the tops of 2013, 2017 and 2021 — and not in the cycle of 2024.</li></ul>' +
+      '<p>The bar runs from its lowest to its highest reading since 2012; the line under it counts the days that were lower than today.</p>' +
+      '<p class="cph-n">It compares two averages of the price — it does not look at what coins cost. A reference, not a signal.</p>'; } },
     etf: { title: 'ETF Flows (US spot)', body: function () { return '<p>Money going into (+, green) or out of (−, red) the US spot Bitcoin or Ethereum ETFs, per trading day.</p>' +
       '<p>Big steady inflows mean institutions are buying; outflows mean they are selling. The totals show the last 7 days, the last 30 days and since launch.</p><p>Source: SoSoValue.</p>'; } },
     // ── cloud menu ──
@@ -202,8 +216,9 @@
     exitStructure: { title: 'Market Structure', body: function () { return '<p>Where the money is moving: out of Bitcoin into altcoins, and out of cash on the side into the market.</p>' +
       '<ul><li><b>BTC Dominance</b> falling: money has moved from Bitcoin into altcoins.</li><li><b>USDT Dominance</b> falling: little cash is left waiting.</li><li><b>ETH / BTC</b> rising: altcoins are beating Bitcoin.</li></ul>' +
       '<p>Signs that usually show late in a cycle — not a verdict that the top is in. Each is set against your own level, and the group has its own count.</p>'; } },
-    exitValuation: { title: 'Bitcoin Valuation', body: function () { return '<p>Whether Bitcoin\'s own price has reached a high zone against its history.</p>' +
-      '<ul><li><b>Bitcoin Rainbow</b>: the band the price holds around its long-term trend line.</li><li><b>Bitcoin Pi Cycle</b>: Bitcoin\'s 111-day average against twice its 350-day one.</li><li><b>Bitcoin MVRV</b>: Bitcoin\'s market value ÷ its realized value (source: Coin Metrics).</li></ul>' +
+    // Bitcoin Valuation has ONE explanation of its three readings (VAL_LIST), on the Exit page and on the Market Hub;
+    // each page adds only what is its own: your levels and the count there, "a reading of the past" here.
+    exitValuation: { title: 'Bitcoin Valuation', body: function () { return '<p>Whether Bitcoin\'s own price has reached a high zone against its history.</p>' + VAL_LIST +
       '<p>The three look at the same thing from different sides and tend to move together — so they are counted on their own, never added to Market Structure.</p>' +
       '<p>Each cycle\'s highest has been lower than the one before: Edit targets shows what each cycle reached, so you can choose your own levels.</p>'; } },
     maxDrawdown: { title: 'Max Drawdown', body: function () { return '<p>The deepest fall from a peak, in the period the chart shows.</p>' +

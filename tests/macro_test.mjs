@@ -56,6 +56,10 @@ const mv = d => 1.6 + 1.2 * Math.sin((d - 14000) / 232);   // a made-up ratio, a
   check('…the months before 2011 are not a reading (no 140 anywhere)', s.peaks.every(p => p[1] < 10) && s.peaks.length === 5, s.peaks);
   check('…each cycle\'s highest and lowest, named by the year they happened', s.peaks[1].join() === '2013,5.88,2013-11-18' && s.peaks[4].join() === '2024,2.95,2024-11-21' && s.lows[1].join() === '2015,0.2,2015-01-14', [s.peaks, s.lows]);
   check('…a week and a month back; the last day at or over 3.5 and under 1', near(s.wk, mv(last - 7), 1e-4) && near(s.mo, mv(last - 30), 1e-4) && s.over35 === '2013-11-18' && typeof s.under1 === 'string' && s.src === 'Coin Metrics' && !('via' in s), s);
+  { const from = dn('2012-01-01'), H = [...days.entries()].filter(([d, v]) => d >= from && v > 0), cur = days.get(last), h = s.hist;
+    check('mvrvSummary: its place in its history — the share of days since 2012 under today\'s ratio, the lowest and the highest', h && h.from === '2012-01-01' && h.days === H.length && near(h.under, +(H.filter(([, v]) => v < cur).length / H.length * 100).toFixed(1)) && near(h.lo[0], Math.min(...H.map(x => x[1])), 1e-3) && near(h.hi[0], Math.max(...H.map(x => x[1])), 1e-3), h);
+    const rd = C.mvrvRead(s, NOW);
+    check('…mvrvRead hands it on; a part without it reads null (the card then shows no line)', rd && rd.hist && rd.hist.under === h.under && rd.hist.year === 2012 && C.mvrvRead({ ...s, hist: undefined }, NOW).hist === null, rd && rd.hist); }
   check('…a stand-in day is marked', mvrvSummary(days, { via: 'blockchain.com', nowMs: NOW }).via === 'blockchain.com' && mvrvSummary(days, { via: 'blockchain.com', nowMs: NOW }).realized === null);
   check('…too few days → nothing', mvrvSummary(new Map([[TODAY - 1, 1.1]])) === null);
 }
